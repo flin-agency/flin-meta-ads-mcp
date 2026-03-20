@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# flin-meta-ads-mcp
-=======
 # flin-meta-ads-mcp
 
 `flin-meta-ads-mcp` is a public, strict read-only MCP server for Meta Ads. It is designed to be installed with `uvx` and loaded into Claude with minimal setup.
@@ -141,4 +138,3 @@ uvx flin-meta-ads-mcp
 - Use only ad accounts you are allowed to access
 - This server is intended for analysis and reporting, not mutation
 - Public users should treat `META_ACCESS_TOKEN` as a secret and supply it through environment variables only
->>>>>>> origin/codex/flin-meta-ads-mcp-v0-1-0
