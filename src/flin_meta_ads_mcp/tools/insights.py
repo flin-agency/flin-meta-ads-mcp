@@ -38,7 +38,7 @@ def validate_insights_args(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def get_insights(*, client: MetaClient, settings: MetaAdsSettings, arguments: dict[str, Any]) -> dict[str, Any]:
     args = validate_insights_args(arguments)
-    account_id = resolve_ad_account_id(args.get("ad_account_id"), settings.default_ad_account_id)
+    account_id = resolve_ad_account_id(client=client, ad_account_id=args.get("ad_account_id"))
     params: dict[str, Any] = {
         "level": args["level"],
         "fields": fields_to_csv(args.get("fields"), DEFAULT_INSIGHT_FIELDS),
@@ -64,4 +64,3 @@ def get_insights(*, client: MetaClient, settings: MetaAdsSettings, arguments: di
         api_version=settings.api_version,
         request_id=getattr(client, "last_request_id", None),
     )
-

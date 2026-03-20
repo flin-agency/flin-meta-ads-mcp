@@ -40,7 +40,6 @@ Add this to your Claude MCP config:
       "args": ["flin-meta-ads-mcp"],
       "env": {
         "META_ACCESS_TOKEN": "EAA...",
-        "META_AD_ACCOUNT_ID": "act_123456789",
         "META_GRAPH_API_VERSION": "v21.0"
       }
     }
@@ -56,11 +55,15 @@ Required:
 
 Optional:
 
-- `META_AD_ACCOUNT_ID`: default ad account, for example `act_123456789`
 - `META_GRAPH_API_VERSION`: Graph API version, default `v21.0`
 - `META_TIMEOUT_SECONDS`: request timeout, default `30`
 - `META_MAX_RETRIES`: retry count for transient failures, default `3`
 - `RUN_LIVE_META_TESTS`: set to `1` to enable live integration tests
+
+Ad account selection:
+
+- If the token has exactly one accessible ad account, the server resolves it automatically.
+- If the token has multiple accessible ad accounts, pass `ad_account_id` in the tool call.
 
 ## 2-minute smoke test
 
@@ -74,7 +77,7 @@ Example flow in Claude:
 
 ```text
 Call list_ad_accounts
-Call list_campaigns with an ad_account_id
+Call list_campaigns
 Call get_insights with level=campaign and date_preset=last_7d
 ```
 
@@ -87,7 +90,7 @@ If the first call works but later calls fail, the issue is usually permissions o
 | Token missing | `META_ACCESS_TOKEN` is not set | Add the env var and restart Claude |
 | Token invalid | Expired or wrong token | Generate a valid Meta read token |
 | Permission denied | Missing `ads_read` or account access | Grant the token access to the ad account |
-| Ad account missing | `META_AD_ACCOUNT_ID` is not set and no override was passed | Set `META_AD_ACCOUNT_ID` or pass `ad_account_id` per tool call |
+| Ambiguous ad account | Token can access multiple ad accounts | Pass `ad_account_id` per tool call |
 | Rate limit errors | Meta API throttling | Retry later or reduce the number of insight calls |
 
 ## Development

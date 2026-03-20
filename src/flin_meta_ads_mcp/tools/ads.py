@@ -11,7 +11,7 @@ ENTITY_PATH = "ads"
 
 
 def list_ads(*, client: MetaClient, settings: MetaAdsSettings, arguments: dict[str, Any]) -> dict[str, Any]:
-    account_id = resolve_ad_account_id(arguments.get("ad_account_id"), settings.default_ad_account_id)
+    account_id = resolve_ad_account_id(client=client, ad_account_id=arguments.get("ad_account_id"))
     payload = client.get_json(
         f"{account_id}/{ENTITY_PATH}",
         params=compact_params({

@@ -1,24 +1,47 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
-from ..config import MetaAdsSettings
 from ..response import ok_response
 
+if TYPE_CHECKING:
+    from ..meta_client import MetaClient
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
 
 
-def resolve_ad_account_id(ad_account_id: str | None, default_ad_account_id: str | None) -> str:
-    resolved = ad_account_id or default_ad_account_id
-    if not resolved:
-        raise ValueError("ad_account_id is required (argument or META_AD_ACCOUNT_ID)")
-    return normalize_account_id(resolved)
+def resolve_ad_account_id(*, client: MetaClient, ad_account_id: str | None) -> str:
+    if ad_account_id:
+        return normalize_account_id(ad_account_id)
+    return _discover_single_ad_account_id(client)
 
 
 def normalize_account_id(value: str) -> str:
     return value if value.startswith("act_") else f"act_{value}"
+
+
+def _discover_single_ad_account_id(client: MetaClient) -> str:
+    cached = getattr(client, "_resolved_ad_account_id", None)
+    if isinstance(cached, str) and cached:
+        return cached
+
+    payload = client.get_json("me/adaccounts", params={"fields": "id", "limit": 2})
+    accounts = payload.get("data", [])
+    account_ids = [
+        normalize_account_id(str(account.get("id")))
+        for account in accounts
+        if isinstance(account, Mapping) and account.get("id")
+    ]
+    unique_ids = sorted(set(account_ids))
+
+    if not unique_ids:
+        raise ValueError("No ad accounts accessible for this token")
+    if len(unique_ids) > 1:
+        raise ValueError("Multiple ad accounts accessible; pass ad_account_id")
+
+    setattr(client, "_resolved_ad_account_id", unique_ids[0])
+    return unique_ids[0]
 
 
 def normalize_limit(value: Any, default: int = DEFAULT_LIMIT) -> int:
@@ -102,7 +125,3 @@ def filter_clause(level: str, entity_ids: list[str]) -> list[dict[str, Any]]:
             "value": entity_ids,
         }
     ]
-
-
-def get_settings_api_version(settings: MetaAdsSettings) -> str:
-    return settings.api_version

@@ -14,7 +14,6 @@ def test_load_config_requires_access_token(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_load_config_uses_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("META_ACCESS_TOKEN", "token")
-    monkeypatch.delenv("META_AD_ACCOUNT_ID", raising=False)
     monkeypatch.delenv("META_GRAPH_API_VERSION", raising=False)
     monkeypatch.delenv("META_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("META_MAX_RETRIES", raising=False)
@@ -22,7 +21,6 @@ def test_load_config_uses_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = load_config()
 
     assert settings.access_token == "token"
-    assert settings.default_ad_account_id is None
     assert settings.api_version == "v21.0"
     assert settings.timeout_seconds == 30.0
     assert settings.max_retries == 3
