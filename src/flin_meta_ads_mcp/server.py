@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+import asyncio
+import json
+from typing import Any
+
+from .config import MetaAdsSettings, load_config
+from .dispatcher import dispatch_tool
+from .errors import AccountSelectionRequired, MetaAdsError
+from .response import error_response, selection_required_response
+from .tool_registry import tool_specs
+
+mcp_types: Any = None
+Server: Any = None
+stdio_server: Any = None
+
+try:  # Optional at import time for local testing without the dependency installed.
+    from mcp import types as mcp_types
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+except Exception:  # pragma: no cover - exercised only when dependency is unavailable.
+    pass
+
+
+def create_server(settings: MetaAdsSettings | None = None, client: Any | None = None) -> Any:
+    if Server is None or mcp_types is None:
+        raise RuntimeError("mcp is required to create the MCP server")
+
+    server = Server("flin-meta-ads-mcp")
+    resolved_settings = settings or load_config()
+    runtime_client = client or _client(resolved_settings)
+
+    @server.list_tools()
+    async def list_tools() -> list[Any]:
+        return [
+            mcp_types.Tool(
+                name=spec.name,
+                description=spec.description,
+                inputSchema=spec.input_schema,
+            )
+            for spec in tool_specs()
+        ]
+
+    @server.call_tool()
+    async def call_tool(name: str, arguments: dict[str, Any]) -> list[Any]:
+        request_id = getattr(runtime_client, "last_request_id", None)
+        try:
+            result = dispatch_tool(name, arguments or {}, settings=resolved_settings, client=runtime_client)
+        except AccountSelectionRequired as exc:
+            result = selection_required_response(
+                question=str(exc),
+                parameter="ad_account_id",
+                choices=exc.choices,
+                api_version=resolved_settings.api_version,
+                request_id=request_id,
+            )
+        except MetaAdsError as exc:
+            result = error_response(
+                code=exc.error_code,
+                message=exc.message,
+                api_version=resolved_settings.api_version,
+                request_id=exc.request_id or request_id,
+                details=exc.details,
+            )
+        except PermissionError as exc:
+            result = error_response(
+                code="permission_error",
+                message=str(exc),
+                api_version=resolved_settings.api_version,
+                request_id=request_id,
+            )
+        except (ValueError, TypeError, KeyError) as exc:
+            result = error_response(
+                code="validation_error",
+                message=str(exc),
+                api_version=resolved_settings.api_version,
+                request_id=request_id,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            result = error_response(
+                code="meta_api_error",
+                message="Unexpected server error",
+                api_version=resolved_settings.api_version,
+                request_id=request_id,
+                details={"error": str(exc)},
+            )
+        return [mcp_types.TextContent(type="text", text=json.dumps(result, separators=(",", ":"), sort_keys=True))]
+
+    return server
+
+
+def main() -> None:
+    if stdio_server is None or Server is None:
+        raise RuntimeError("mcp is required to run flin-meta-ads-mcp")
+    asyncio.run(_main())
+
+
+async def _main() -> None:
+    resolved_settings = load_config()
+    with _client(resolved_settings) as runtime_client:
+        server = create_server(resolved_settings, client=runtime_client)
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+def _client(settings: MetaAdsSettings):
+    from .meta_client import MetaClient
+
+    return MetaClient(
+        access_token=settings.access_token,
+        api_version=settings.api_version,
+        timeout_seconds=settings.timeout_seconds,
+        max_retries=settings.max_retries,
+    )
