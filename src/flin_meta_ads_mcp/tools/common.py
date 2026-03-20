@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
+from ..errors import AccountSelectionRequired
 from ..response import ok_response
 
 if TYPE_CHECKING:
@@ -26,22 +27,29 @@ def _discover_single_ad_account_id(client: MetaClient) -> str:
     if isinstance(cached, str) and cached:
         return cached
 
-    payload = client.get_json("me/adaccounts", params={"fields": "id", "limit": 2})
+    payload = client.get_json("me/adaccounts", params={"fields": "id,name", "limit": 100})
     accounts = payload.get("data", [])
-    account_ids = [
-        normalize_account_id(str(account.get("id")))
-        for account in accounts
-        if isinstance(account, Mapping) and account.get("id")
-    ]
-    unique_ids = sorted(set(account_ids))
+    choices_by_id: dict[str, dict[str, str]] = {}
+    for account in accounts:
+        if not isinstance(account, Mapping) or not account.get("id"):
+            continue
+        account_id = normalize_account_id(str(account.get("id")))
+        name = str(account.get("name") or "")
+        label = f"{name} ({account_id})" if name else account_id
+        choices_by_id[account_id] = {"ad_account_id": account_id, "label": label}
+    choices = [choices_by_id[key] for key in sorted(choices_by_id)]
 
-    if not unique_ids:
+    if not choices:
         raise ValueError("No ad accounts accessible for this token")
-    if len(unique_ids) > 1:
-        raise ValueError("Multiple ad accounts accessible; pass ad_account_id")
+    if len(choices) > 1:
+        raise AccountSelectionRequired(
+            choices=choices,
+            message="Multiple ad accounts available. Which ad_account_id should I use?",
+        )
 
-    setattr(client, "_resolved_ad_account_id", unique_ids[0])
-    return unique_ids[0]
+    resolved = choices[0]["ad_account_id"]
+    setattr(client, "_resolved_ad_account_id", resolved)
+    return resolved
 
 
 def normalize_limit(value: Any, default: int = DEFAULT_LIMIT) -> int:

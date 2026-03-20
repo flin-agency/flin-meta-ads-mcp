@@ -50,3 +50,29 @@ def error_response(
         },
     }
 
+
+def selection_required_response(
+    *,
+    question: str,
+    parameter: str,
+    choices: list[dict[str, str]],
+    api_version: str,
+    request_id: str | None,
+) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "data": {
+            "type": "selection_required",
+            "question": question,
+            "parameter": parameter,
+            "choices": choices,
+        },
+        "paging": {
+            "next_after": None,
+            "has_next": False,
+        },
+        "meta": {
+            "api_version": api_version,
+            "request_id": request_id,
+        },
+    }

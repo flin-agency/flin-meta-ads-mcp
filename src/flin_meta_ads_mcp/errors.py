@@ -39,6 +39,12 @@ class MetaAPIError(MetaAdsError):
     error_code = "meta_api_error"
 
 
+class AccountSelectionRequired(Exception):
+    def __init__(self, *, choices: list[dict[str, str]], message: str | None = None) -> None:
+        self.choices = choices
+        super().__init__(message or "Multiple ad accounts found. Please choose ad_account_id.")
+
+
 def error_from_payload(
     *,
     message: str,
@@ -47,4 +53,3 @@ def error_from_payload(
     details: dict | None = None,
 ) -> MetaAdsError:
     return MetaAPIError(message, status_code=status_code, request_id=request_id, details=details)
-

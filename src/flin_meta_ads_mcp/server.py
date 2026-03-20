@@ -6,8 +6,8 @@ from typing import Any
 
 from .config import MetaAdsSettings, load_config
 from .dispatcher import dispatch_tool
-from .errors import MetaAdsError
-from .response import error_response
+from .errors import AccountSelectionRequired, MetaAdsError
+from .response import error_response, selection_required_response
 from .tool_registry import tool_specs
 
 mcp_types: Any = None
@@ -46,6 +46,14 @@ def create_server(settings: MetaAdsSettings | None = None, client: Any | None = 
         request_id = getattr(runtime_client, "last_request_id", None)
         try:
             result = dispatch_tool(name, arguments or {}, settings=resolved_settings, client=runtime_client)
+        except AccountSelectionRequired as exc:
+            result = selection_required_response(
+                question=str(exc),
+                parameter="ad_account_id",
+                choices=exc.choices,
+                api_version=resolved_settings.api_version,
+                request_id=request_id,
+            )
         except MetaAdsError as exc:
             result = error_response(
                 code=exc.error_code,

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import pytest
 
 from flin_meta_ads_mcp.config import MetaAdsSettings
+from flin_meta_ads_mcp.errors import AccountSelectionRequired
 from flin_meta_ads_mcp.tools.ads import list_ads
 from flin_meta_ads_mcp.tools.campaigns import list_campaigns
 from flin_meta_ads_mcp.tools.insights import get_insights
@@ -86,5 +87,6 @@ def test_list_ads_requires_ad_account_id_when_multiple_accounts_exist() -> None:
         max_retries=1,
     )
 
-    with pytest.raises(ValueError, match="Multiple ad accounts"):
+    with pytest.raises(AccountSelectionRequired) as exc_info:
         list_ads(client=client, settings=settings, arguments={})
+    assert [choice["ad_account_id"] for choice in exc_info.value.choices] == ["act_111", "act_222"]
