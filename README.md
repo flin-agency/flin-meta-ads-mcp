@@ -22,10 +22,16 @@ That means:
 
 ## Install
 
-Use it via `uvx`:
+Install and run from PyPI:
 
 ```bash
 uvx flin-meta-ads-mcp
+```
+
+Test the latest GitHub code before a PyPI release:
+
+```bash
+uvx --from git+https://github.com/flin-agency/flin-meta-ads-mcp.git flin-meta-ads-mcp
 ```
 
 ## Claude config
@@ -83,6 +89,8 @@ Call get_insights with level=campaign and date_preset=last_7d
 
 If the first call works but later calls fail, the issue is usually permissions or ad account scope.
 
+If `list_campaigns` returns a selection request, call it again with one of the suggested `ad_account_id` values.
+
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
@@ -108,6 +116,21 @@ If you want to run live Meta API tests:
 
 ```bash
 RUN_LIVE_META_TESTS=1 pytest -q
+```
+
+## Release
+
+Create and push a release tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+After release, users can run:
+
+```bash
+uvx flin-meta-ads-mcp
 ```
 
 ## Notes
