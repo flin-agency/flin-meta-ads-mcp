@@ -21,7 +21,7 @@ def tool_specs() -> list[ToolSpec]:
         ToolSpec(
             name="get_ad_account",
             description="Fetch a single ad account by id",
-            input_schema=_id_schema(),
+            input_schema=_account_id_schema(),
         ),
         ToolSpec(
             name="list_campaigns",
@@ -69,9 +69,9 @@ def tool_specs() -> list[ToolSpec]:
             input_schema={
                 "type": "object",
                 "properties": {
-                    "ad_id": {"type": "string"},
+                    "ad_id": {"type": "string", "pattern": "^[0-9]+$"},
                     "ad_format": {"type": "string", "default": "DESKTOP_FEED_STANDARD"},
-                    "ad_account_id": {"type": "string"},
+                    "ad_account_id": {"type": "string", "pattern": "^(act_)?[0-9]+$"},
                 },
                 "required": ["ad_id"],
                 "additionalProperties": False,
@@ -84,7 +84,7 @@ def tool_specs() -> list[ToolSpec]:
                 "type": "object",
                 "properties": {
                     "level": {"type": "string", "enum": ["account", "campaign", "adset", "ad"]},
-                    "ad_account_id": {"type": "string"},
+                    "ad_account_id": {"type": "string", "pattern": "^(act_)?[0-9]+$"},
                     "date_preset": {"type": "string"},
                     "time_range": {
                         "type": "object",
@@ -96,15 +96,15 @@ def tool_specs() -> list[ToolSpec]:
                     },
                     "fields": {
                         "type": "array",
-                        "items": {"type": "string"},
+                        "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"},
                     },
                     "breakdowns": {
                         "type": "array",
-                        "items": {"type": "string"},
+                        "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"},
                     },
                     "action_breakdowns": {
                         "type": "array",
-                        "items": {"type": "string"},
+                        "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"},
                     },
                     "time_increment": {
                         "oneOf": [
@@ -114,8 +114,9 @@ def tool_specs() -> list[ToolSpec]:
                     },
                     "entity_ids": {
                         "type": "array",
-                        "items": {"type": "string"},
+                        "items": {"type": "string", "pattern": "^[0-9]+$"},
                     },
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 200},
                 },
                 "required": ["level"],
                 "additionalProperties": False,
@@ -128,12 +129,12 @@ def _list_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "properties": {
-            "ad_account_id": {"type": "string"},
+            "ad_account_id": {"type": "string", "pattern": "^(act_)?[0-9]+$"},
             "fields": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"},
             },
-            "limit": {"type": "integer", "default": 50},
+            "limit": {"type": "integer", "default": 50, "minimum": 1, "maximum": 200},
             "after": {"type": "string"},
             "effective_status": {
                 "type": "array",
@@ -148,13 +149,27 @@ def _id_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "properties": {
-            "id": {"type": "string"},
+            "id": {"type": "string", "pattern": "^[0-9]+$"},
             "fields": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"},
             },
         },
         "required": ["id"],
         "additionalProperties": False,
     }
 
+
+def _account_id_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "pattern": "^(act_)?[0-9]+$"},
+            "fields": {
+                "type": "array",
+                "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]*$"},
+            },
+        },
+        "required": ["id"],
+        "additionalProperties": False,
+    }

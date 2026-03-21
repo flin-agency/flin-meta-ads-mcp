@@ -75,7 +75,8 @@ class MetaClient:
     ) -> _RequestResult:
         url = self._build_url(path)
         request_params = dict(params or {})
-        request_params["access_token"] = self.access_token
+        request_params.pop("access_token", None)
+        request_headers = {"Authorization": f"Bearer {self.access_token}"}
         attempts = 0
 
         while True:
@@ -83,6 +84,7 @@ class MetaClient:
                 method,
                 url,
                 params=request_params,
+                headers=request_headers,
                 json=dict(json_body or {}) if json_body is not None else None,
             )
             request_id = self._request_id_from_response(response)

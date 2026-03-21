@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
 from ..errors import AccountSelectionRequired
@@ -10,6 +11,11 @@ if TYPE_CHECKING:
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
+MAX_FIELDS = 50
+
+ACCOUNT_ID_PATTERN = re.compile(r"^(?:act_)?([0-9]+)$")
+ENTITY_ID_PATTERN = re.compile(r"^[0-9]+$")
+FIELD_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_.]*$")
 
 
 def resolve_ad_account_id(*, client: MetaClient, ad_account_id: str | None) -> str:
@@ -19,7 +25,22 @@ def resolve_ad_account_id(*, client: MetaClient, ad_account_id: str | None) -> s
 
 
 def normalize_account_id(value: str) -> str:
-    return value if value.startswith("act_") else f"act_{value}"
+    if not isinstance(value, str):
+        raise ValueError("ad_account_id must be a string")
+    clean_value = value.strip()
+    match = ACCOUNT_ID_PATTERN.fullmatch(clean_value)
+    if not match:
+        raise ValueError("ad_account_id must be numeric, with optional act_ prefix")
+    return f"act_{match.group(1)}"
+
+
+def validate_meta_id(value: str, *, parameter_name: str = "id") -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{parameter_name} must be a string")
+    clean_value = value.strip()
+    if not ENTITY_ID_PATTERN.fullmatch(clean_value):
+        raise ValueError(f"{parameter_name} must be a numeric Meta id")
+    return clean_value
 
 
 def _discover_single_ad_account_id(client: MetaClient) -> str:
@@ -33,7 +54,10 @@ def _discover_single_ad_account_id(client: MetaClient) -> str:
     for account in accounts:
         if not isinstance(account, Mapping) or not account.get("id"):
             continue
-        account_id = normalize_account_id(str(account.get("id")))
+        try:
+            account_id = normalize_account_id(str(account.get("id")))
+        except ValueError:
+            continue
         name = str(account.get("name") or "")
         label = f"{name} ({account_id})" if name else account_id
         choices_by_id[account_id] = {"ad_account_id": account_id, "label": label}
@@ -61,6 +85,48 @@ def normalize_limit(value: Any, default: int = DEFAULT_LIMIT) -> int:
 def fields_to_csv(fields: Iterable[str] | None, default_fields: Iterable[str]) -> str:
     values = list(fields or default_fields)
     return ",".join(values)
+
+
+def resolve_fields(
+    fields: Iterable[str] | None,
+    *,
+    default_fields: Iterable[str],
+    allowed_fields: Iterable[str],
+) -> str:
+    selected = list(default_fields) if fields is None else list(fields)
+    if not selected:
+        raise ValueError("fields must not be empty")
+    if len(selected) > MAX_FIELDS:
+        raise ValueError(f"fields must contain at most {MAX_FIELDS} entries")
+
+    allowed = set(allowed_fields)
+    resolved: list[str] = []
+    seen: set[str] = set()
+    unsupported: set[str] = set()
+
+    for field in selected:
+        if not isinstance(field, str):
+            raise ValueError("fields must contain only strings")
+        clean_field = field.strip()
+        if not clean_field:
+            raise ValueError("fields must not contain empty values")
+        if not FIELD_NAME_PATTERN.fullmatch(clean_field):
+            raise ValueError(f"Invalid field name: {clean_field}")
+        if clean_field not in allowed:
+            unsupported.add(clean_field)
+            continue
+        if clean_field not in seen:
+            seen.add(clean_field)
+            resolved.append(clean_field)
+
+    if unsupported:
+        rejected = ", ".join(sorted(unsupported))
+        raise ValueError(f"Unsupported fields requested: {rejected}")
+
+    if not resolved:
+        raise ValueError("fields must include at least one allowed value")
+
+    return ",".join(resolved)
 
 
 def build_ok_response(

@@ -8,9 +8,9 @@
 - Reads campaigns, ad sets, ads, and creatives
 - Gets ad previews
 - Fetches insights for account, campaign, ad set, and ad levels
-- Stays read-only in `v0.1.0`
+- Stays read-only in `v0.1.x`
 
-## Scope for `v0.1.0`
+## Scope for `v0.1.x`
 
 This release is strictly read-only.
 
@@ -22,28 +22,56 @@ That means:
 
 ## Install
 
-Install and run from PyPI:
+Install and run the latest published PyPI release:
 
 ```bash
 uvx flin-meta-ads-mcp
 ```
 
-Test the latest GitHub code before a PyPI release:
+Install and refresh to the newest published release:
 
 ```bash
-uvx --from git+https://github.com/flin-agency/flin-meta-ads-mcp.git flin-meta-ads-mcp
+uvx --refresh flin-meta-ads-mcp
+```
+
+Run the latest GitHub code (main branch):
+
+```bash
+uvx --refresh --from git+https://github.com/flin-agency/flin-meta-ads-mcp.git flin-meta-ads-mcp
 ```
 
 ## Claude config
 
-Add this to your Claude MCP config:
+Stable (latest published PyPI release, refreshed):
 
 ```json
 {
   "mcpServers": {
     "flin-meta-ads-mcp": {
       "command": "uvx",
-      "args": ["flin-meta-ads-mcp"],
+      "args": ["--refresh", "flin-meta-ads-mcp"],
+      "env": {
+        "META_ACCESS_TOKEN": "EAA...",
+        "META_GRAPH_API_VERSION": "v21.0"
+      }
+    }
+  }
+}
+```
+
+Latest GitHub code (main branch, refreshed):
+
+```json
+{
+  "mcpServers": {
+    "flin-meta-ads-mcp": {
+      "command": "uvx",
+      "args": [
+        "--refresh",
+        "--from",
+        "git+https://github.com/flin-agency/flin-meta-ads-mcp.git",
+        "flin-meta-ads-mcp"
+      ],
       "env": {
         "META_ACCESS_TOKEN": "EAA...",
         "META_GRAPH_API_VERSION": "v21.0"
@@ -123,8 +151,8 @@ RUN_LIVE_META_TESTS=1 pytest -q
 Create and push a release tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
 After release, users can run:

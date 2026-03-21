@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Any
 
 from .config import MetaAdsSettings, load_config
@@ -9,6 +10,8 @@ from .dispatcher import dispatch_tool
 from .errors import AccountSelectionRequired, MetaAdsError
 from .response import error_response, selection_required_response
 from .tool_registry import tool_specs
+
+logger = logging.getLogger(__name__)
 
 mcp_types: Any = None
 Server: Any = None
@@ -76,13 +79,13 @@ def create_server(settings: MetaAdsSettings | None = None, client: Any | None = 
                 api_version=resolved_settings.api_version,
                 request_id=request_id,
             )
-        except Exception as exc:  # pragma: no cover - defensive fallback
+        except Exception:  # pragma: no cover - defensive fallback
+            logger.exception("Unexpected server error while handling MCP tool call")
             result = error_response(
                 code="meta_api_error",
                 message="Unexpected server error",
                 api_version=resolved_settings.api_version,
                 request_id=request_id,
-                details={"error": str(exc)},
             )
         return [mcp_types.TextContent(type="text", text=json.dumps(result, separators=(",", ":"), sort_keys=True))]
 

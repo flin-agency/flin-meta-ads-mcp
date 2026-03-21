@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flin-meta-ads-mcp"
-version = "0.1.0"
+version = "0.1.4"
 description = "Strict read-only MCP server for Meta Ads"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,4 +39,3 @@ line-length = 100
 python_version = "3.11"
 warn_unused_configs = true
 ignore_missing_imports = true
-

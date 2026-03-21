@@ -4,9 +4,32 @@ from typing import Any
 
 from ..config import MetaAdsSettings
 from ..meta_client import MetaClient
-from .common import build_collection_response, build_entity_response, compact_params, fields_to_csv, normalize_limit, resolve_ad_account_id
+from .common import (
+    build_collection_response,
+    build_entity_response,
+    compact_params,
+    normalize_limit,
+    resolve_ad_account_id,
+    resolve_fields,
+    validate_meta_id,
+)
 
 DEFAULT_CAMPAIGN_FIELDS = ["id", "name", "status", "effective_status", "objective"]
+ALLOWED_CAMPAIGN_FIELDS = {
+    "id",
+    "name",
+    "status",
+    "effective_status",
+    "objective",
+    "created_time",
+    "updated_time",
+    "start_time",
+    "stop_time",
+    "daily_budget",
+    "lifetime_budget",
+    "bid_strategy",
+    "buying_type",
+}
 ENTITY_PATH = "campaigns"
 
 
@@ -15,7 +38,11 @@ def list_campaigns(*, client: MetaClient, settings: MetaAdsSettings, arguments: 
     payload = client.get_json(
         f"{account_id}/{ENTITY_PATH}",
         params=compact_params({
-            "fields": fields_to_csv(arguments.get("fields"), DEFAULT_CAMPAIGN_FIELDS),
+            "fields": resolve_fields(
+                arguments.get("fields"),
+                default_fields=DEFAULT_CAMPAIGN_FIELDS,
+                allowed_fields=ALLOWED_CAMPAIGN_FIELDS,
+            ),
             "limit": normalize_limit(arguments.get("limit")),
             "after": arguments.get("after"),
         }),
@@ -28,7 +55,17 @@ def list_campaigns(*, client: MetaClient, settings: MetaAdsSettings, arguments: 
 
 
 def get_campaign(*, client: MetaClient, settings: MetaAdsSettings, arguments: dict[str, Any]) -> dict[str, Any]:
-    payload = client.get_json(arguments["id"], params={"fields": fields_to_csv(arguments.get("fields"), DEFAULT_CAMPAIGN_FIELDS)})
+    campaign_id = validate_meta_id(arguments["id"], parameter_name="id")
+    payload = client.get_json(
+        campaign_id,
+        params={
+            "fields": resolve_fields(
+                arguments.get("fields"),
+                default_fields=DEFAULT_CAMPAIGN_FIELDS,
+                allowed_fields=ALLOWED_CAMPAIGN_FIELDS,
+            )
+        },
+    )
     return build_entity_response(
         payload=payload,
         api_version=settings.api_version,

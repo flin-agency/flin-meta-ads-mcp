@@ -7,8 +7,9 @@ import pytest
 from flin_meta_ads_mcp.config import MetaAdsSettings
 from flin_meta_ads_mcp.errors import AccountSelectionRequired
 from flin_meta_ads_mcp.tools.ads import list_ads
-from flin_meta_ads_mcp.tools.campaigns import list_campaigns
+from flin_meta_ads_mcp.tools.campaigns import get_campaign, list_campaigns
 from flin_meta_ads_mcp.tools.insights import get_insights
+from flin_meta_ads_mcp.tools.previews import get_ad_preview
 
 
 @dataclass
@@ -90,3 +91,76 @@ def test_list_ads_requires_ad_account_id_when_multiple_accounts_exist() -> None:
     with pytest.raises(AccountSelectionRequired) as exc_info:
         list_ads(client=client, settings=settings, arguments={})
     assert [choice["ad_account_id"] for choice in exc_info.value.choices] == ["act_111", "act_222"]
+
+
+def test_get_campaign_rejects_non_numeric_id() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="numeric"):
+        get_campaign(client=client, settings=settings, arguments={"id": "act_111/campaigns"})
+
+
+def test_list_campaigns_rejects_invalid_ad_account_id() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="ad_account_id"):
+        list_campaigns(client=client, settings=settings, arguments={"ad_account_id": "act_foo"})
+
+
+def test_list_campaigns_rejects_unknown_fields() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="Unsupported fields"):
+        list_campaigns(
+            client=client,
+            settings=settings,
+            arguments={"ad_account_id": "act_222", "fields": ["id", "not_a_real_field"]},
+        )
+
+
+def test_get_insights_rejects_unknown_fields() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="Unsupported fields"):
+        get_insights(
+            client=client,
+            settings=settings,
+            arguments={"level": "campaign", "fields": ["impressions", "not_a_real_metric"]},
+        )
+
+
+def test_get_ad_preview_rejects_non_numeric_ad_id() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="ad_id"):
+        get_ad_preview(client=client, settings=settings, arguments={"ad_id": "../bad"})

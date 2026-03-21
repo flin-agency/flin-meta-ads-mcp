@@ -27,6 +27,21 @@ def test_get_json_retries_after_rate_limit(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 @respx.mock
+def test_get_json_uses_authorization_header_not_query_token() -> None:
+    route = respx.get("https://graph.facebook.com/v21.0/act_123/campaigns").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+
+    client = MetaClient(access_token="token", api_version="v21.0", timeout_seconds=10, max_retries=1)
+    client.get_json("act_123/campaigns", params={"limit": 10})
+
+    assert len(route.calls) == 1
+    request = route.calls[0].request
+    assert request.headers.get("Authorization") == "Bearer token"
+    assert request.url.params.get("access_token") is None
+
+
+@respx.mock
 def test_get_json_maps_permission_error() -> None:
     respx.get("https://graph.facebook.com/v21.0/act_123/campaigns").mock(
         return_value=httpx.Response(
