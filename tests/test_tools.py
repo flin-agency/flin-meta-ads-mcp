@@ -10,7 +10,8 @@ from flin_meta_ads_mcp.tools.ads import list_ads
 from flin_meta_ads_mcp.tools.campaigns import get_campaign, list_campaigns
 from flin_meta_ads_mcp.tools.images import get_ad_image, list_ad_images
 from flin_meta_ads_mcp.tools.insights import get_insights
-from flin_meta_ads_mcp.tools.previews import get_ad_preview
+from flin_meta_ads_mcp.tools.previews import get_ad_preview, get_ad_preview_screenshot
+import flin_meta_ads_mcp.tools.previews as preview_tools
 
 
 @dataclass
@@ -274,6 +275,71 @@ def test_get_ad_preview_rejects_multiple_preview_sources() -> None:
             client=client,
             settings=settings,
             arguments={"ad_id": "120242247667500564", "ad_creative_id": "120242247667500565"},
+        )
+
+
+def test_get_ad_preview_screenshot_returns_base64_and_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_capture(*, preview_url: str, viewport_width: int, viewport_height: int, timeout_ms: int) -> str:
+        assert preview_url == "https://business.facebook.com/ads/api/preview_iframe.php?d=AQX&t=AQY"
+        assert viewport_width == 390
+        assert viewport_height == 844
+        assert timeout_ms == 30000
+        return "ZmFrZV9wbmc="
+
+    monkeypatch.setattr(preview_tools, "_capture_preview_screenshot", fake_capture)
+
+    class PreviewClient(DummyClient):
+        def get_json(self, path: str, params: dict) -> dict:
+            self.calls.append((path, dict(params)))
+            return {
+                "data": [
+                    {
+                        "body": '<iframe src="https://business.facebook.com/ads/api/preview_iframe.php?d=AQX&amp;t=AQY"></iframe>'
+                    }
+                ]
+            }
+
+    client = PreviewClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    result = get_ad_preview_screenshot(
+        client=client,
+        settings=settings,
+        arguments={"ad_id": "120242247667500564", "ad_format": "MOBILE_FEED_STANDARD"},
+    )
+
+    assert result["ok"] is True
+    assert client.calls == [("120242247667500564/previews", {"ad_format": "MOBILE_FEED_STANDARD"})]
+    assert result["data"]["preview_url"] == "https://business.facebook.com/ads/api/preview_iframe.php?d=AQX&t=AQY"
+    assert result["data"]["mime_type"] == "image/png"
+    assert result["data"]["image_base64"] == "ZmFrZV9wbmc="
+    assert result["data"]["viewport"] == {"width": 390, "height": 844}
+
+
+def test_get_ad_preview_screenshot_rejects_when_preview_url_is_missing() -> None:
+    class PreviewClient(DummyClient):
+        def get_json(self, path: str, params: dict) -> dict:
+            self.calls.append((path, dict(params)))
+            return {"data": [{"body": "<div>no iframe here</div>"}]}
+
+    client = PreviewClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="preview_url"):
+        get_ad_preview_screenshot(
+            client=client,
+            settings=settings,
+            arguments={"ad_id": "120242247667500564"},
         )
 
 

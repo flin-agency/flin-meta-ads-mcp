@@ -127,7 +127,26 @@ def _client(settings: MetaAdsSettings):
 
 
 def _tool_result_contents(*, name: str, result: dict[str, Any]) -> list[Any]:
-    contents: list[Any] = [mcp_types.TextContent(type="text", text=json.dumps(result, separators=(",", ":"), sort_keys=True))]
+    response_payload = result
+    contents: list[Any] = []
+
+    if name == "get_ad_preview_screenshot" and isinstance(result.get("data"), dict):
+        screenshot_data = result["data"]
+        image_base64 = screenshot_data.get("image_base64")
+        mime_type = screenshot_data.get("mime_type", "image/png")
+        image_content = getattr(mcp_types, "ImageContent", None)
+        if isinstance(image_base64, str) and image_base64 and image_content is not None:
+            contents.append(image_content(type="image", data=image_base64, mimeType=mime_type))
+            redacted = dict(screenshot_data)
+            redacted["image_base64"] = f"<omitted:{len(image_base64)} chars>"
+            response_payload = dict(result)
+            response_payload["data"] = redacted
+
+    contents.insert(
+        0,
+        mcp_types.TextContent(type="text", text=json.dumps(response_payload, separators=(",", ":"), sort_keys=True)),
+    )
+
     preview_html = _preview_mcp_app_html(name=name, result=result)
     if preview_html is None:
         return contents

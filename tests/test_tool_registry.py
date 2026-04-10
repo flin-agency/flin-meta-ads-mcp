@@ -20,6 +20,7 @@ def test_tool_registry_exposes_expected_read_only_tools() -> None:
         "list_ad_creatives",
         "get_ad_creative",
         "get_ad_preview",
+        "get_ad_preview_screenshot",
         "get_insights",
     ]
 
@@ -32,6 +33,15 @@ def test_get_insights_requires_level_field() -> None:
 
 def test_get_ad_preview_supports_ad_creative_and_generatepreviews_inputs() -> None:
     spec = next(spec for spec in tool_specs() if spec.name == "get_ad_preview")
+
+    one_of_required = spec.input_schema["oneOf"]
+    assert {"required": ["ad_id"]} in one_of_required
+    assert {"required": ["ad_creative_id"]} in one_of_required
+    assert {"required": ["creative"]} in one_of_required
+
+
+def test_get_ad_preview_screenshot_supports_ad_creative_and_generatepreviews_inputs() -> None:
+    spec = next(spec for spec in tool_specs() if spec.name == "get_ad_preview_screenshot")
 
     one_of_required = spec.input_schema["oneOf"]
     assert {"required": ["ad_id"]} in one_of_required

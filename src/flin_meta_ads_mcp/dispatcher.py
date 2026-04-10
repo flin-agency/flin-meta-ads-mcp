@@ -12,7 +12,7 @@ from .tools.campaigns import get_campaign, list_campaigns
 from .tools.creatives import get_ad_creative, list_ad_creatives
 from .tools.images import get_ad_image, list_ad_images
 from .tools.insights import get_insights
-from .tools.previews import get_ad_preview
+from .tools.previews import get_ad_preview, get_ad_preview_screenshot
 
 ToolHandler = Callable[[MetaClient, MetaAdsSettings, dict[str, Any]], dict[str, Any]]
 
@@ -78,6 +78,11 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
         arguments=arguments,
     ),
     "get_ad_preview": lambda client, settings, arguments: get_ad_preview(
+        client=client,
+        settings=settings,
+        arguments=arguments,
+    ),
+    "get_ad_preview_screenshot": lambda client, settings, arguments: get_ad_preview_screenshot(
         client=client,
         settings=settings,
         arguments=arguments,

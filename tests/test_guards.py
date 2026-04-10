@@ -10,6 +10,7 @@ def test_read_only_guard_accepts_list_tools() -> None:
     assert_read_only_tool("get_insights")
     assert_read_only_tool("list_ad_images")
     assert_read_only_tool("get_ad_image")
+    assert_read_only_tool("get_ad_preview_screenshot")
 
 
 def test_read_only_guard_rejects_write_like_tool() -> None:

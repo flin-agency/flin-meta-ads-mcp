@@ -23,6 +23,13 @@ class _DummyMcpTypes:
             self.inputSchema = inputSchema
 
 
+class _DummyImageContent:
+    def __init__(self, *, type: str, data: str, mimeType: str) -> None:
+        self.type = type
+        self.data = data
+        self.mimeType = mimeType
+
+
 class _DummyTextResourceContents:
     def __init__(self, *, uri: str, mimeType: str, text: str) -> None:
         self.uri = uri
@@ -39,6 +46,10 @@ class _DummyEmbeddedResource:
 class _DummyMcpTypesWithUi(_DummyMcpTypes):
     TextResourceContents = _DummyTextResourceContents
     EmbeddedResource = _DummyEmbeddedResource
+
+
+class _DummyMcpTypesWithUiAndImage(_DummyMcpTypesWithUi):
+    ImageContent = _DummyImageContent
 
 
 class _DummyServer:
@@ -128,3 +139,27 @@ def test_tool_result_contents_adds_embedded_preview_when_ui_types_available(monk
     assert contents[0].type == "text"
     assert contents[1].type == "resource"
     assert contents[1].resource.mimeType == "text/html;profile=mcp-app"
+
+
+def test_tool_result_contents_adds_image_content_for_preview_screenshot(monkeypatch) -> None:
+    monkeypatch.setattr(server, "mcp_types", _DummyMcpTypesWithUiAndImage)
+
+    contents = server._tool_result_contents(
+        name="get_ad_preview_screenshot",
+        result={
+            "ok": True,
+            "data": {
+                "preview_url": "https://business.facebook.com/ads/api/preview_iframe.php?d=AQ&t=AQ",
+                "mime_type": "image/png",
+                "image_base64": "ZmFrZV9wbmc=",
+            },
+        },
+    )
+
+    assert len(contents) == 2
+    assert contents[0].type == "text"
+    assert contents[1].type == "image"
+    assert contents[1].mimeType == "image/png"
+
+    payload = json.loads(contents[0].text)
+    assert payload["data"]["image_base64"].startswith("<omitted:")
