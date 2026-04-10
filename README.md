@@ -6,8 +6,7 @@
 
 - Lists and reads Meta Ads accounts
 - Reads campaigns, ad sets, ads, ad images, and creatives
-- Gets ad previews
-- Captures ad preview screenshots (PNG)
+- Gets ad previews (including `preview_url` links)
 - Fetches insights for account, campaign, ad set, and ad levels
 - Stays read-only in `v0.1.x`
 
@@ -131,7 +130,6 @@ If `list_campaigns` returns a selection request, call it again with one of the s
 | Permission denied | Missing `ads_read` or account access | Grant the token access to the ad account |
 | Ambiguous ad account | Token can access multiple ad accounts | Pass `ad_account_id` per tool call |
 | Rate limit errors | Meta API throttling | Retry later or reduce the number of insight calls |
-| Screenshot tool fails | Playwright browser runtime missing | Run `playwright install chromium` or install Google Chrome |
 
 ## Development
 
@@ -155,8 +153,8 @@ RUN_LIVE_META_TESTS=1 pytest -q
 Create and push a release tag:
 
 ```bash
-git tag v0.1.8
-git push origin v0.1.8
+git tag v0.1.9
+git push origin v0.1.9
 ```
 
 After release, users can run:

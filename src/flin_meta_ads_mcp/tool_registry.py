@@ -99,34 +99,6 @@ def tool_specs() -> list[ToolSpec]:
             },
         ),
         ToolSpec(
-            name="get_ad_preview_screenshot",
-            description="Capture a PNG screenshot from an ad preview",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "ad_id": {"type": "string", "pattern": "^[0-9]+$"},
-                    "ad_creative_id": {"type": "string", "pattern": "^[0-9]+$"},
-                    "creative": {
-                        "oneOf": [
-                            {"type": "object"},
-                            {"type": "string"},
-                        ]
-                    },
-                    "ad_format": {"type": "string", "default": "DESKTOP_FEED_STANDARD"},
-                    "ad_account_id": {"type": "string", "pattern": "^(act_)?[0-9]+$"},
-                    "viewport_width": {"type": "integer", "minimum": 200, "maximum": 1920},
-                    "viewport_height": {"type": "integer", "minimum": 200, "maximum": 4000},
-                    "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 120000},
-                },
-                "oneOf": [
-                    {"required": ["ad_id"]},
-                    {"required": ["ad_creative_id"]},
-                    {"required": ["creative"]},
-                ],
-                "additionalProperties": False,
-            },
-        ),
-        ToolSpec(
             name="get_insights",
             description="Fetch insights for an account, campaign, ad set, or ad",
             input_schema={

@@ -15,7 +15,6 @@ READ_ONLY_TOOL_NAMES = {
     "list_ad_creatives",
     "get_ad_creative",
     "get_ad_preview",
-    "get_ad_preview_screenshot",
     "get_insights",
 }
 
