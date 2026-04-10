@@ -23,6 +23,24 @@ class _DummyMcpTypes:
             self.inputSchema = inputSchema
 
 
+class _DummyTextResourceContents:
+    def __init__(self, *, uri: str, mimeType: str, text: str) -> None:
+        self.uri = uri
+        self.mimeType = mimeType
+        self.text = text
+
+
+class _DummyEmbeddedResource:
+    def __init__(self, *, type: str, resource: _DummyTextResourceContents) -> None:
+        self.type = type
+        self.resource = resource
+
+
+class _DummyMcpTypesWithUi(_DummyMcpTypes):
+    TextResourceContents = _DummyTextResourceContents
+    EmbeddedResource = _DummyEmbeddedResource
+
+
 class _DummyServer:
     def __init__(self, _: str, version: str | None = None) -> None:
         self.call_tool_handler = None
@@ -85,3 +103,28 @@ def test_create_server_sets_server_version(monkeypatch) -> None:
     test_server = server.create_server(settings=settings)
 
     assert test_server.version == server.__version__
+
+
+def test_preview_mcp_app_html_is_generated_for_get_ad_preview_result() -> None:
+    html = server._preview_mcp_app_html(
+        name="get_ad_preview",
+        result={"ok": True, "data": [{"preview_url": "https://business.facebook.com/ads/api/preview_iframe.php?d=AQ&t=AQ"}]},
+    )
+
+    assert html is not None
+    assert "iframe" in html
+    assert "Open in new tab" in html
+
+
+def test_tool_result_contents_adds_embedded_preview_when_ui_types_available(monkeypatch) -> None:
+    monkeypatch.setattr(server, "mcp_types", _DummyMcpTypesWithUi)
+
+    contents = server._tool_result_contents(
+        name="get_ad_preview",
+        result={"ok": True, "data": [{"preview_url": "https://business.facebook.com/ads/api/preview_iframe.php?d=AQ&t=AQ"}]},
+    )
+
+    assert len(contents) == 2
+    assert contents[0].type == "text"
+    assert contents[1].type == "resource"
+    assert contents[1].resource.mimeType == "text/html;profile=mcp-app"

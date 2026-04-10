@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from html import escape
 from typing import Any
+from uuid import uuid4
 
 from . import __version__
 from .config import MetaAdsSettings, load_config
@@ -91,7 +93,7 @@ def create_server(settings: MetaAdsSettings | None = None, client: Any | None = 
                 api_version=resolved_settings.api_version,
                 request_id=request_id,
             )
-        return [mcp_types.TextContent(type="text", text=json.dumps(result, separators=(",", ":"), sort_keys=True))]
+        return _tool_result_contents(name=name, result=result)
 
     return server
 
@@ -122,3 +124,65 @@ def _client(settings: MetaAdsSettings):
     if settings.default_ad_account_id:
         setattr(client, "_default_ad_account_id", settings.default_ad_account_id)
     return client
+
+
+def _tool_result_contents(*, name: str, result: dict[str, Any]) -> list[Any]:
+    contents: list[Any] = [mcp_types.TextContent(type="text", text=json.dumps(result, separators=(",", ":"), sort_keys=True))]
+    preview_html = _preview_mcp_app_html(name=name, result=result)
+    if preview_html is None:
+        return contents
+
+    text_resource_contents = getattr(mcp_types, "TextResourceContents", None)
+    embedded_resource = getattr(mcp_types, "EmbeddedResource", None)
+    if text_resource_contents is None or embedded_resource is None:
+        return contents
+
+    contents.append(
+        embedded_resource(
+            type="resource",
+            resource=text_resource_contents(
+                uri=f"ui://flin-meta-ads-mcp/ad-preview/{uuid4().hex}",
+                mimeType="text/html;profile=mcp-app",
+                text=preview_html,
+            ),
+        )
+    )
+    return contents
+
+
+def _preview_mcp_app_html(*, name: str, result: dict[str, Any]) -> str | None:
+    if name != "get_ad_preview" or not result.get("ok"):
+        return None
+
+    rows = result.get("data")
+    if not isinstance(rows, list):
+        return None
+
+    preview_url: str | None = None
+    for row in rows:
+        if isinstance(row, dict):
+            url = row.get("preview_url")
+            if isinstance(url, str) and url:
+                preview_url = url
+                break
+
+    if preview_url is None:
+        return None
+
+    safe_preview_url = escape(preview_url, quote=True)
+    return (
+        "<!doctype html>"
+        "<html><head><meta charset='utf-8'/>"
+        "<style>"
+        "html,body{margin:0;padding:0;background:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}"
+        ".wrap{padding:12px;}"
+        ".hint{font-size:12px;color:#344054;margin-bottom:8px;}"
+        ".cta{display:inline-block;font-size:12px;margin-bottom:10px;color:#0c66e4;text-decoration:none;}"
+        ".frame{width:335px;height:450px;border:0;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(16,24,40,.15);}"
+        "</style></head><body>"
+        "<div class='wrap'>"
+        "<div class='hint'>Ad Preview</div>"
+        f"<a class='cta' href='{safe_preview_url}' target='_blank' rel='noopener noreferrer'>Open in new tab</a>"
+        f"<iframe class='frame' src='{safe_preview_url}' loading='lazy'></iframe>"
+        "</div></body></html>"
+    )

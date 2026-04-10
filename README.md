@@ -153,8 +153,8 @@ RUN_LIVE_META_TESTS=1 pytest -q
 Create and push a release tag:
 
 ```bash
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```
 
 After release, users can run:
