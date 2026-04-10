@@ -21,6 +21,9 @@ FIELD_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_.]*$")
 def resolve_ad_account_id(*, client: MetaClient, ad_account_id: str | None) -> str:
     if ad_account_id:
         return normalize_account_id(ad_account_id)
+    default_ad_account_id = getattr(client, "_default_ad_account_id", None)
+    if isinstance(default_ad_account_id, str) and default_ad_account_id:
+        return normalize_account_id(default_ad_account_id)
     return _discover_single_ad_account_id(client)
 
 

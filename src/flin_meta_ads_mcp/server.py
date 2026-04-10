@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Any
 
+from . import __version__
 from .config import MetaAdsSettings, load_config
 from .dispatcher import dispatch_tool
 from .errors import AccountSelectionRequired, MetaAdsError
@@ -29,7 +30,10 @@ def create_server(settings: MetaAdsSettings | None = None, client: Any | None = 
     if Server is None or mcp_types is None:
         raise RuntimeError("mcp is required to create the MCP server")
 
-    server = Server("flin-meta-ads-mcp")
+    try:
+        server = Server("flin-meta-ads-mcp", version=__version__)
+    except TypeError:  # pragma: no cover - compatibility fallback for older mcp versions.
+        server = Server("flin-meta-ads-mcp")
     resolved_settings = settings or load_config()
     runtime_client = client or _client(resolved_settings)
 
@@ -109,9 +113,12 @@ async def _main() -> None:
 def _client(settings: MetaAdsSettings):
     from .meta_client import MetaClient
 
-    return MetaClient(
+    client = MetaClient(
         access_token=settings.access_token,
         api_version=settings.api_version,
         timeout_seconds=settings.timeout_seconds,
         max_retries=settings.max_retries,
     )
+    if settings.default_ad_account_id:
+        setattr(client, "_default_ad_account_id", settings.default_ad_account_id)
+    return client

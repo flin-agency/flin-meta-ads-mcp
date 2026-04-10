@@ -54,6 +54,16 @@ def tool_specs() -> list[ToolSpec]:
             input_schema=_id_schema(),
         ),
         ToolSpec(
+            name="list_ad_images",
+            description="List ad images for an ad account",
+            input_schema=_list_schema(),
+        ),
+        ToolSpec(
+            name="get_ad_image",
+            description="Fetch a single ad image by id",
+            input_schema=_id_schema(),
+        ),
+        ToolSpec(
             name="list_ad_creatives",
             description="List ad creatives for an ad account",
             input_schema=_list_schema(),

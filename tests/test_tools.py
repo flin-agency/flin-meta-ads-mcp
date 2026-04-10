@@ -8,6 +8,7 @@ from flin_meta_ads_mcp.config import MetaAdsSettings
 from flin_meta_ads_mcp.errors import AccountSelectionRequired
 from flin_meta_ads_mcp.tools.ads import list_ads
 from flin_meta_ads_mcp.tools.campaigns import get_campaign, list_campaigns
+from flin_meta_ads_mcp.tools.images import get_ad_image, list_ad_images
 from flin_meta_ads_mcp.tools.insights import get_insights
 from flin_meta_ads_mcp.tools.previews import get_ad_preview
 
@@ -54,6 +55,24 @@ def test_list_ads_auto_resolves_single_account_id() -> None:
     assert result["ok"] is True
     assert client.calls[0][0] == "me/adaccounts"
     assert client.calls[1][0] == "act_111/ads"
+
+
+def test_list_ads_uses_client_default_account_id_without_discovery_call() -> None:
+    client = DummyClient(calls=[], ad_accounts=["act_111", "act_222"])
+    setattr(client, "_default_ad_account_id", "act_2054139041534164")
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    result = list_ads(client=client, settings=settings, arguments={})
+
+    assert result["ok"] is True
+    assert client.calls == [
+        ("act_2054139041534164/ads", {"fields": "id,name,status,effective_status,adset_id,campaign_id", "limit": 50})
+    ]
 
 
 def test_get_insights_passes_entity_filters() -> None:
@@ -164,3 +183,39 @@ def test_get_ad_preview_rejects_non_numeric_ad_id() -> None:
 
     with pytest.raises(ValueError, match="ad_id"):
         get_ad_preview(client=client, settings=settings, arguments={"ad_id": "../bad"})
+
+
+def test_list_ad_images_prefers_per_call_ad_account_id() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    result = list_ad_images(client=client, settings=settings, arguments={"ad_account_id": "act_222", "limit": 10})
+
+    assert result["ok"] is True
+    assert client.calls == [
+        (
+            "act_222/adimages",
+            {
+                "fields": "id,hash,name,width,height,url,url_128,permalink_url,status,created_time,updated_time",
+                "limit": 10,
+            },
+        )
+    ]
+
+
+def test_get_ad_image_rejects_non_numeric_id() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="numeric"):
+        get_ad_image(client=client, settings=settings, arguments={"id": "act_111/adimages"})

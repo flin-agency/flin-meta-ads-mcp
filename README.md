@@ -5,7 +5,7 @@
 ## What it does
 
 - Lists and reads Meta Ads accounts
-- Reads campaigns, ad sets, ads, and creatives
+- Reads campaigns, ad sets, ads, ad images, and creatives
 - Gets ad previews
 - Fetches insights for account, campaign, ad set, and ad levels
 - Stays read-only in `v0.1.x`
@@ -92,11 +92,13 @@ Optional:
 - `META_GRAPH_API_VERSION`: Graph API version, default `v21.0`
 - `META_TIMEOUT_SECONDS`: request timeout, default `30`
 - `META_MAX_RETRIES`: retry count for transient failures, default `3`
+- `META_DEFAULT_AD_ACCOUNT_ID`: optional fallback ad account (e.g. `act_123...`) used when a tool call omits `ad_account_id`
 - `RUN_LIVE_META_TESTS`: set to `1` to enable live integration tests
 
 Ad account selection:
 
 - If the token has exactly one accessible ad account, the server resolves it automatically.
+- If `META_DEFAULT_AD_ACCOUNT_ID` is set, the server uses it when `ad_account_id` is omitted.
 - If the token has multiple accessible ad accounts, pass `ad_account_id` in the tool call.
 
 ## 2-minute smoke test

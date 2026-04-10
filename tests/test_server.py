@@ -24,9 +24,10 @@ class _DummyMcpTypes:
 
 
 class _DummyServer:
-    def __init__(self, _: str) -> None:
+    def __init__(self, _: str, version: str | None = None) -> None:
         self.call_tool_handler = None
         self.list_tools_handler = None
+        self.version = version
 
     def list_tools(self):
         def decorator(func):
@@ -68,3 +69,19 @@ def test_call_tool_unexpected_exception_does_not_leak_internal_error_details(mon
     assert payload["error"]["message"] == "Unexpected server error"
     assert payload["error"]["details"] == {}
     assert "sensitive backend failure" not in response_chunks[0].text
+
+
+def test_create_server_sets_server_version(monkeypatch) -> None:
+    monkeypatch.setattr(server, "Server", _DummyServer)
+    monkeypatch.setattr(server, "mcp_types", _DummyMcpTypes)
+    monkeypatch.setattr(server, "_client", lambda _: type("ClientStub", (), {})())
+
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+    test_server = server.create_server(settings=settings)
+
+    assert test_server.version == server.__version__

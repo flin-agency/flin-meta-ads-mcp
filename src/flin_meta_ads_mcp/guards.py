@@ -10,6 +10,8 @@ READ_ONLY_TOOL_NAMES = {
     "get_adset",
     "list_ads",
     "get_ad",
+    "list_ad_images",
+    "get_ad_image",
     "list_ad_creatives",
     "get_ad_creative",
     "get_ad_preview",
@@ -20,4 +22,3 @@ READ_ONLY_TOOL_NAMES = {
 def assert_read_only_tool(name: str) -> None:
     if name not in READ_ONLY_TOOL_NAMES:
         raise PermissionError("Tool is not allowed in strict read-only mode")
-
