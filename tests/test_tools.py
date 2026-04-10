@@ -185,6 +185,98 @@ def test_get_ad_preview_rejects_non_numeric_ad_id() -> None:
         get_ad_preview(client=client, settings=settings, arguments={"ad_id": "../bad"})
 
 
+def test_get_ad_preview_returns_extracted_preview_url() -> None:
+    class PreviewClient(DummyClient):
+        def get_json(self, path: str, params: dict) -> dict:
+            self.calls.append((path, dict(params)))
+            return {
+                "data": [
+                    {
+                        "body": '<iframe src="https://business.facebook.com/ads/api/preview_iframe.php?d=AQX&amp;t=AQY" '
+                        'width="335" height="450"></iframe>'
+                    }
+                ]
+            }
+
+    client = PreviewClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    result = get_ad_preview(client=client, settings=settings, arguments={"ad_id": "120242247667500564"})
+
+    assert result["ok"] is True
+    assert client.calls == [("120242247667500564/previews", {"ad_format": "DESKTOP_FEED_STANDARD"})]
+    assert result["data"][0]["preview_url"] == "https://business.facebook.com/ads/api/preview_iframe.php?d=AQX&t=AQY"
+
+
+def test_get_ad_preview_supports_ad_creative_id() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    result = get_ad_preview(
+        client=client,
+        settings=settings,
+        arguments={"ad_creative_id": "120242247667500564", "ad_format": "MOBILE_FEED_STANDARD"},
+    )
+
+    assert result["ok"] is True
+    assert client.calls == [("120242247667500564/previews", {"ad_format": "MOBILE_FEED_STANDARD"})]
+
+
+def test_get_ad_preview_supports_generatepreviews_with_creative_spec() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    result = get_ad_preview(
+        client=client,
+        settings=settings,
+        arguments={
+            "ad_account_id": "act_222",
+            "ad_format": "MOBILE_FEED_STANDARD",
+            "creative": {"object_story_spec": {"page_id": "123"}},
+        },
+    )
+
+    assert result["ok"] is True
+    assert client.calls == [
+        (
+            "act_222/generatepreviews",
+            {"ad_format": "MOBILE_FEED_STANDARD", "creative": '{"object_story_spec":{"page_id":"123"}}'},
+        )
+    ]
+
+
+def test_get_ad_preview_rejects_multiple_preview_sources() -> None:
+    client = DummyClient(calls=[])
+    settings = MetaAdsSettings(
+        access_token="token",
+        api_version="v21.0",
+        timeout_seconds=10,
+        max_retries=1,
+    )
+
+    with pytest.raises(ValueError, match="Exactly one"):
+        get_ad_preview(
+            client=client,
+            settings=settings,
+            arguments={"ad_id": "120242247667500564", "ad_creative_id": "120242247667500565"},
+        )
+
+
 def test_list_ad_images_prefers_per_call_ad_account_id() -> None:
     client = DummyClient(calls=[])
     settings = MetaAdsSettings(

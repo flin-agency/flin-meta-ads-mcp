@@ -28,3 +28,12 @@ def test_get_insights_requires_level_field() -> None:
     spec = next(spec for spec in tool_specs() if spec.name == "get_insights")
 
     assert "level" in spec.input_schema["required"]
+
+
+def test_get_ad_preview_supports_ad_creative_and_generatepreviews_inputs() -> None:
+    spec = next(spec for spec in tool_specs() if spec.name == "get_ad_preview")
+
+    one_of_required = spec.input_schema["oneOf"]
+    assert {"required": ["ad_id"]} in one_of_required
+    assert {"required": ["ad_creative_id"]} in one_of_required
+    assert {"required": ["creative"]} in one_of_required

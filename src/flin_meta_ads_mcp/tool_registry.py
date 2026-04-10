@@ -75,15 +75,26 @@ def tool_specs() -> list[ToolSpec]:
         ),
         ToolSpec(
             name="get_ad_preview",
-            description="Fetch a rendered preview for an ad",
+            description="Fetch or generate a rendered preview for an ad or ad creative",
             input_schema={
                 "type": "object",
                 "properties": {
                     "ad_id": {"type": "string", "pattern": "^[0-9]+$"},
+                    "ad_creative_id": {"type": "string", "pattern": "^[0-9]+$"},
+                    "creative": {
+                        "oneOf": [
+                            {"type": "object"},
+                            {"type": "string"},
+                        ]
+                    },
                     "ad_format": {"type": "string", "default": "DESKTOP_FEED_STANDARD"},
                     "ad_account_id": {"type": "string", "pattern": "^(act_)?[0-9]+$"},
                 },
-                "required": ["ad_id"],
+                "oneOf": [
+                    {"required": ["ad_id"]},
+                    {"required": ["ad_creative_id"]},
+                    {"required": ["creative"]},
+                ],
                 "additionalProperties": False,
             },
         ),
