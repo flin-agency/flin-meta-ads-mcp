@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import re
 import secrets
+import threading
 import time
 import webbrowser
 from collections.abc import Callable
@@ -93,6 +94,7 @@ class _CallbackServer(HTTPServer):
 def receive_code(
     settings: LoginSettings, *, state: str, timeout: float,
     launch: Callable[[], None],
+    cancel: threading.Event | None = None,
 ) -> str:
     uri = urlsplit(settings.redirect_uri)
     outcome: list[str | LoginError] = []
@@ -137,8 +139,10 @@ def receive_code(
         server.timeout = 0.25
         deadline = time.monotonic() + timeout
         launch()
-        while not outcome and time.monotonic() < deadline:
+        while not outcome and time.monotonic() < deadline and not (cancel and cancel.is_set()):
             server.handle_request()
+    if cancel and cancel.is_set():
+        raise LoginError("Login cancelled.")
     if not outcome:
         raise LoginError("Login timed out. Run flin-meta-ads-mcp login again.")
     if isinstance(outcome[0], LoginError):
@@ -210,6 +214,8 @@ def verify_access(credentials: Credentials, client: httpx.Client) -> None:
 def browser_login(
     settings: LoginSettings, *, manual: bool = False, no_browser: bool = False,
     timeout: float = 180,
+    on_authorization_url: Callable[[str], None] | None = None,
+    cancel: threading.Event | None = None,
 ) -> Credentials:
     settings.validate(manual=manual)
     if not math.isfinite(timeout) or timeout <= 0:
@@ -218,7 +224,10 @@ def browser_login(
     url = authorization_url(settings, state)
 
     def launch() -> None:
-        print(f"Open this URL to sign in to Meta:\n{url}")
+        if on_authorization_url:
+            on_authorization_url(url)
+        else:
+            print(f"Open this URL to sign in to Meta:\n{url}")
         if not no_browser:
             try:
                 webbrowser.open(url)
@@ -231,7 +240,7 @@ def browser_login(
         redirected = getpass("Paste the full redirected URL (input hidden): ")
         code = callback_code(redirected.strip(), redirect_uri=settings.redirect_uri, state=state)
     else:
-        code = receive_code(settings, state=state, timeout=timeout, launch=launch)
+        code = receive_code(settings, state=state, timeout=timeout, launch=launch, cancel=cancel)
     with httpx.Client(timeout=30, follow_redirects=False) as client:
         credentials = exchange_code(settings, code, client)
         verify_access(credentials, client)

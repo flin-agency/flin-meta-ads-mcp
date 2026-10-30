@@ -42,6 +42,43 @@ uvx --refresh --from git+https://github.com/flin-agency/flin-meta-ads-mcp.git fl
 
 ## Claude config
 
+### First start without an access token (v0.1.12 and later)
+
+Configure the App ID and App Secret; no access token is needed to start the MCP server:
+
+```json
+{
+  "mcpServers": {
+    "flin-meta-ads-mcp": {
+      "command": "uvx",
+      "args": ["--refresh", "flin-meta-ads-mcp@latest"],
+      "env": {
+        "META_APP_ID": "YOUR_NUMERIC_APP_ID",
+        "META_APP_SECRET": "YOUR_APP_SECRET"
+      }
+    }
+  }
+}
+```
+
+Restart Claude and ask it to sign you in to Meta. It can call `start_meta_login`
+and show you a browser link. After approving access, ask it to check
+`get_meta_auth_status`. Once the status is `ready`, the Ads tools work immediately
+without restarting Claude. The saved login is also reused on subsequent starts.
+
+The server remains connected when credentials are missing or expired. Ads calls
+then return login instructions instead of crashing the connection. If only the
+App Secret is configured, `start_meta_login` can accept your public App ID as
+`app_id`; never pass the App Secret in chat. An App Secret alone cannot identify
+the app for browser login.
+
+The in-chat flow uses the local callback `http://localhost:8765/callback` and
+waits for up to three minutes without blocking MCP initialization. Your Meta app
+must allow that redirect and grant `ads_read`. For apps requiring HTTPS, use the
+terminal login's `--manual` flow described below. Multiple simultaneous login
+requests in one server reuse the same pending link; if another process has the
+callback port open, finish that login or select another configured redirect port.
+
 ### Browser login (v0.1.11 and later)
 
 You can sign in to Meta instead of manually generating and copying an access token.
@@ -76,8 +113,9 @@ You can sign in to Meta instead of manually generating and copying an access tok
    }
    ```
 
-   Restart the MCP client and call `list_ad_accounts`. It loads the saved login
-   automatically. Remove any old `META_ACCESS_TOKEN` from its configuration:
+   Call `list_ad_accounts`. It loads the saved login automatically, including when
+   the server was already running without credentials. Remove any old `META_ACCESS_TOKEN`
+   from its configuration and restart the MCP client after changing that configuration:
    an explicitly configured token takes precedence over the saved login.
 
 The token and App Secret are stored in
@@ -256,8 +294,8 @@ RUN_LIVE_META_TESTS=1 pytest -q
 Create and push a release tag:
 
 ```bash
-git tag v0.1.11
-git push origin v0.1.11
+git tag v0.1.12
+git push origin v0.1.12
 ```
 
 After release, users can run:

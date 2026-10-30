@@ -4,10 +4,13 @@ import asyncio
 import json
 
 import httpx
+import pytest
 import respx
 
 from flin_meta_ads_mcp import server
+from flin_meta_ads_mcp.auth_session import AuthSession
 from flin_meta_ads_mcp.config import MetaAdsSettings, load_config
+from flin_meta_ads_mcp.credentials import Credentials, save_credentials
 
 
 @respx.mock
@@ -81,6 +84,53 @@ class _DummyServer:
             return func
 
         return decorator
+
+
+def test_server_starts_without_token_and_returns_login_instructions(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "Server", _DummyServer)
+    monkeypatch.setattr(server, "mcp_types", _DummyMcpTypes)
+    monkeypatch.setattr(server, "_client", lambda _: pytest.fail("Must not contact Meta without login"))
+    auth = AuthSession({"META_APP_SECRET": "private-secret", "META_AUTH_FILE": str(tmp_path / "auth.json")})
+    test_server = server.create_server(auth_session=auth)
+    names = [tool.name for tool in asyncio.run(test_server.list_tools_handler())]
+    assert "start_meta_login" in names
+    assert "get_meta_auth_status" in names
+    chunks = asyncio.run(test_server.call_tool_handler("list_ad_accounts", {}))
+    result = json.loads(chunks[0].text)
+    assert result["status"] == "authentication_required"
+    assert result["missing_configuration"] == ["META_APP_ID"]
+    assert "private-secret" not in chunks[0].text
+    auth.close()
+
+
+@respx.mock
+def test_running_server_uses_newly_saved_login_without_restart(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "Server", _DummyServer)
+    monkeypatch.setattr(server, "mcp_types", _DummyMcpTypes)
+    path = tmp_path / "auth.json"
+    auth = AuthSession({"META_APP_ID": "123", "META_APP_SECRET": "secret", "META_AUTH_FILE": str(path)})
+    test_server = server.create_server(auth_session=auth)
+    before = asyncio.run(test_server.call_tool_handler("list_ad_accounts", {}))
+    assert json.loads(before[0].text)["status"] == "authentication_required"
+    save_credentials(path, Credentials("123", "secret", "new-token", "v21.0"))
+    route = respx.get("https://graph.facebook.com/v21.0/me/adaccounts").respond(
+        200, json={"data": [{"id": "act_123"}]},
+    )
+    after = asyncio.run(test_server.call_tool_handler("list_ad_accounts", {}))
+    assert json.loads(after[0].text)["data"] == [{"id": "act_123"}]
+    assert route.calls[0].request.headers["Authorization"] == "Bearer new-token"
+    assert "appsecret_proof" in route.calls[0].request.url.params
+    auth.close()
+
+
+def test_auth_tools_do_not_bypass_ads_write_guard(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "Server", _DummyServer)
+    monkeypatch.setattr(server, "mcp_types", _DummyMcpTypes)
+    auth = AuthSession({"META_AUTH_FILE": str(tmp_path / "auth.json")})
+    test_server = server.create_server(auth_session=auth)
+    chunks = asyncio.run(test_server.call_tool_handler("update_campaign", {}))
+    assert json.loads(chunks[0].text)["error"]["code"] == "permission_error"
+    auth.close()
 
 
 def test_call_tool_unexpected_exception_does_not_leak_internal_error_details(monkeypatch) -> None:

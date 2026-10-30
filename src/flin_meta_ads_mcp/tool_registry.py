@@ -11,6 +11,28 @@ class ToolSpec:
     input_schema: dict[str, Any]
 
 
+def auth_tool_specs() -> list[ToolSpec]:
+    return [
+        ToolSpec(
+            name="get_meta_auth_status",
+            description="Check whether Meta login is needed or has completed. Never returns tokens or secrets.",
+            input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolSpec(
+            name="start_meta_login",
+            description=(
+                "Start Meta browser login when the user wants to sign in. Returns a login URL. "
+                "Requires META_APP_SECRET in server configuration; app_id is public and optional "
+                "if META_APP_ID is configured. After browser approval call get_meta_auth_status."
+            ),
+            input_schema={
+                "type": "object", "properties": {"app_id": {"type": "string", "pattern": "^[0-9]+$"}},
+                "additionalProperties": False,
+            },
+        ),
+    ]
+
+
 def tool_specs() -> list[ToolSpec]:
     return [
         ToolSpec(
