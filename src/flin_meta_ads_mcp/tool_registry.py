@@ -86,6 +86,21 @@ def tool_specs() -> list[ToolSpec]:
             input_schema=_id_schema(),
         ),
         ToolSpec(
+            name="download_ad_image",
+            description=(
+                "Download a Meta CDN image URL returned by list_ad_images, get_ad_image, "
+                "or get_ad_creative. Returns the actual image file as an embedded binary "
+                "resource and a direct image preview, without requiring the client to fetch the external URL. "
+                "Supports JPEG, PNG, GIF, WebP up to 5 MiB. Use a fresh URL if expired."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {"url": {"type": "string", "format": "uri"}},
+                "required": ["url"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolSpec(
             name="list_ad_creatives",
             description="List ad creatives for an ad account",
             input_schema=_list_schema(),

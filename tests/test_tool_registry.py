@@ -17,6 +17,7 @@ def test_tool_registry_exposes_expected_read_only_tools() -> None:
         "get_ad",
         "list_ad_images",
         "get_ad_image",
+        "download_ad_image",
         "list_ad_creatives",
         "get_ad_creative",
         "get_ad_preview",

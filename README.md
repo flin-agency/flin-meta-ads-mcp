@@ -6,9 +6,33 @@
 
 - Lists and reads Meta Ads accounts
 - Reads campaigns, ad sets, ads, ad images, and creatives
+- Downloads ad images as embedded files with `download_ad_image`
 - Gets ad previews (including `preview_url` links)
 - Fetches insights for account, campaign, ad set, and ad levels
 - Stays read-only in `v0.1.x`
+
+## Download image files
+
+Call `download_ad_image` with a fresh `url` from `list_ad_images`, `get_ad_image`,
+or an image URL from `get_ad_creative`:
+
+```json
+{"url": "https://scontent.example.fbcdn.net/path/to/image.jpg?signed_query=..."}
+```
+
+The connector fetches the image and returns metadata (`filename`, `mime_type`,
+`size_bytes`) plus a direct MCP image preview and an embedded binary resource containing the actual file.
+The consuming app does not need to fetch the external image URL, so its external
+image-domain allowlist is not involved. Saving or displaying the attachment
+requires the app to support MCP embedded binary resources; the resource URI is
+an identifier, not a hosted download link or a local filesystem path.
+
+Supported formats: JPEG, PNG, GIF, and WebP, up to 5 MiB. Downloads use HTTPS
+Meta CDN subdomains (`fbcdn.net`, `fbsbx.com`), validate every redirect, and never
+send the Meta Graph access token to the CDN. Expired URLs require a fresh lookup.
+No image files are retained on the connector's disk. Existing image metadata
+tools keep their current behavior. Restart the connector after installing the
+updated code so the new tool is discovered.
 
 ## Scope for `v0.1.x`
 
@@ -294,8 +318,8 @@ RUN_LIVE_META_TESTS=1 pytest -q
 Create and push a release tag:
 
 ```bash
-git tag v0.1.12
-git push origin v0.1.12
+git tag v0.1.13
+git push origin v0.1.13
 ```
 
 After release, users can run:

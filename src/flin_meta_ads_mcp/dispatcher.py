@@ -11,13 +11,16 @@ from .tools.ads import get_ad, list_ads
 from .tools.adsets import get_adset, list_adsets
 from .tools.campaigns import get_campaign, list_campaigns
 from .tools.creatives import get_ad_creative, list_ad_creatives
-from .tools.images import get_ad_image, list_ad_images
+from .tools.images import download_ad_image, get_ad_image, list_ad_images
 from .tools.insights import get_insights
 from .tools.previews import get_ad_preview
 
 ToolHandler = Callable[[MetaClient, MetaAdsSettings, dict[str, Any]], dict[str, Any]]
 
 TOOL_HANDLERS: dict[str, ToolHandler] = {
+    "download_ad_image": lambda client, settings, arguments: download_ad_image(
+        client=client, settings=settings, arguments=arguments,
+    ),
     "list_ad_accounts": lambda client, settings, arguments: list_ad_accounts(
         client=client,
         settings=settings,

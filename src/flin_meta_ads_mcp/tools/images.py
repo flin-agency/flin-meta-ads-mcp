@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 from typing import Any
+from uuid import uuid4
 
 from ..config import MetaAdsSettings
 from ..meta_client import MetaClient
+from ..image_download import IMAGE_EXTENSIONS, download_image
 from .common import (
     build_collection_response,
     build_entity_response,
@@ -86,3 +89,22 @@ def get_ad_image(*, client: MetaClient, settings: MetaAdsSettings, arguments: di
         api_version=settings.api_version,
         request_id=getattr(client, "last_request_id", None),
     )
+
+
+def download_ad_image(*, client: MetaClient, settings: MetaAdsSettings, arguments: dict[str, Any]) -> dict[str, Any]:
+    url = arguments.get("url")
+    if not isinstance(url, str) or not url:
+        raise ValueError("url must be an image URL from list_ad_images or get_ad_creative")
+    content, mime_type = download_image(url, timeout_seconds=settings.timeout_seconds)
+    filename = f"ad-image-{uuid4().hex}.{IMAGE_EXTENSIONS[mime_type]}"
+    result = build_entity_response(
+        payload={"filename": filename, "mime_type": mime_type, "size_bytes": len(content)},
+        api_version=settings.api_version,
+        request_id=None,
+    )
+    result["_image_file"] = {
+        "uri": f"meta-ads-image:///{filename}",
+        "mimeType": mime_type,
+        "blob": base64.b64encode(content).decode("ascii"),
+    }
+    return result

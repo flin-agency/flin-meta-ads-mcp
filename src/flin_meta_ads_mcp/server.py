@@ -151,7 +151,18 @@ def _client(settings: MetaAdsSettings):
 
 
 def _tool_result_contents(*, name: str, result: dict[str, Any]) -> list[Any]:
+    image_file = result.get("_image_file")
+    result = {key: value for key, value in result.items() if key != "_image_file"}
     contents: list[Any] = [mcp_types.TextContent(type="text", text=json.dumps(result, separators=(",", ":"), sort_keys=True))]
+
+    if name == "download_ad_image" and result.get("ok") and image_file:
+        contents.append(mcp_types.ImageContent(
+            type="image", data=image_file["blob"], mimeType=image_file["mimeType"],
+        ))
+        contents.append(mcp_types.EmbeddedResource(
+            type="resource", resource=mcp_types.BlobResourceContents(**image_file),
+        ))
+        return contents
 
     preview_html = _preview_mcp_app_html(name=name, result=result)
     if preview_html is None:
