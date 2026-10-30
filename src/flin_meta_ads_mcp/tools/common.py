@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any
 
 from ..errors import AccountSelectionRequired
 from ..response import ok_response
@@ -29,7 +30,7 @@ def resolve_ad_account_id(*, client: MetaClient, ad_account_id: str | None) -> s
 
 def normalize_account_id(value: str) -> str:
     if not isinstance(value, str):
-        raise ValueError("ad_account_id must be a string")
+        raise TypeError("ad_account_id must be a string")
     clean_value = value.strip()
     match = ACCOUNT_ID_PATTERN.fullmatch(clean_value)
     if not match:
@@ -39,7 +40,7 @@ def normalize_account_id(value: str) -> str:
 
 def validate_meta_id(value: str, *, parameter_name: str = "id") -> str:
     if not isinstance(value, str):
-        raise ValueError(f"{parameter_name} must be a string")
+        raise TypeError(f"{parameter_name} must be a string")
     clean_value = value.strip()
     if not ENTITY_ID_PATTERN.fullmatch(clean_value):
         raise ValueError(f"{parameter_name} must be a numeric Meta id")
@@ -75,7 +76,7 @@ def _discover_single_ad_account_id(client: MetaClient) -> str:
         )
 
     resolved = choices[0]["ad_account_id"]
-    setattr(client, "_resolved_ad_account_id", resolved)
+    client._resolved_ad_account_id = resolved
     return resolved
 
 
@@ -109,7 +110,7 @@ def resolve_fields(
 
     for field in selected:
         if not isinstance(field, str):
-            raise ValueError("fields must contain only strings")
+            raise TypeError("fields must contain only strings")
         clean_field = field.strip()
         if not clean_field:
             raise ValueError("fields must not contain empty values")

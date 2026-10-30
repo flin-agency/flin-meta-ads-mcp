@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import os
 import re
-from typing import Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from .credentials import credentials_path, load_credentials
 

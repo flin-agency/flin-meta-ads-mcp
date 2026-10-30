@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 READ_ONLY_TOOL_NAMES = {
     "list_ad_accounts",
     "get_ad_account",

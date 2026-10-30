@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import math
 import re
 import secrets
 import time
-from typing import Any, Callable
-from urllib.parse import parse_qs, urlencode, urlsplit
 import webbrowser
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 
 def test_project_constrains_mcp_to_supported_major_version() -> None:

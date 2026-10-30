@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from http.client import HTTPConnection
 import json
-from pathlib import Path
 import threading
 import time
+from http.client import HTTPConnection
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx

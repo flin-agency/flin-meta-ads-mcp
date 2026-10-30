@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import hmac
 import time
-from typing import Any, Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any, Self
 
 import httpx
 
 from .errors import (
-    MetaAPIError,
     MetaAdsError,
+    MetaAPIError,
     MetaAuthError,
     MetaPermissionError,
     MetaRateLimitError,
@@ -43,8 +44,10 @@ class MetaClient:
         self._client = client or httpx.Client(timeout=self.timeout_seconds)
         self._owns_client = client is None
         self.last_request_id: str | None = None
+        self._default_ad_account_id: str | None = None
+        self._resolved_ad_account_id: str | None = None
 
-    def __enter__(self) -> "MetaClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
@@ -171,6 +174,6 @@ class MetaClient:
 def _safe_json(response: httpx.Response) -> dict[str, Any]:
     try:
         payload = response.json()
-    except Exception:
+    except ValueError:
         return {}
     return payload if isinstance(payload, dict) else {}

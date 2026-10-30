@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
-from getpass import getpass
 import os
 import sys
+from getpass import getpass
 
 from . import __version__
 from .credentials import credentials_path, save_credentials

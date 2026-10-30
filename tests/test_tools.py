@@ -59,7 +59,7 @@ def test_list_ads_auto_resolves_single_account_id() -> None:
 
 def test_list_ads_uses_client_default_account_id_without_discovery_call() -> None:
     client = DummyClient(calls=[], ad_accounts=["act_111", "act_222"])
-    setattr(client, "_default_ad_account_id", "act_2054139041534164")
+    client._default_ad_account_id = "act_2054139041534164"
     settings = MetaAdsSettings(
         access_token="token",
         api_version="v21.0",

@@ -24,8 +24,8 @@ try:  # Optional at import time for local testing without the dependency install
     from mcp import types as mcp_types
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
-except Exception:  # pragma: no cover - exercised only when dependency is unavailable.
-    pass
+except ImportError:  # pragma: no cover - exercised only when dependency is unavailable.
+    logger.debug("MCP dependency is not available")
 
 
 def create_server(settings: MetaAdsSettings | None = None, client: Any | None = None) -> Any:
@@ -123,7 +123,7 @@ def _client(settings: MetaAdsSettings):
         max_retries=settings.max_retries,
     )
     if settings.default_ad_account_id:
-        setattr(client, "_default_ad_account_id", settings.default_ad_account_id)
+        client._default_ad_account_id = settings.default_ad_account_id
     return client
 
 

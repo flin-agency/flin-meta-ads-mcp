@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
 import json
 import math
 import os
-from pathlib import Path
 import tempfile
 import time
-from typing import Mapping
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
