@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import hmac
 import time
 from typing import Any, Mapping
 
@@ -30,9 +32,11 @@ class MetaClient:
         api_version: str,
         timeout_seconds: float,
         max_retries: int,
+        app_secret: str | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         self.access_token = access_token
+        self._app_secret = app_secret
         self.api_version = api_version
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
@@ -76,6 +80,12 @@ class MetaClient:
         url = self._build_url(path)
         request_params = dict(params or {})
         request_params.pop("access_token", None)
+        if self._app_secret:
+            request_params["appsecret_proof"] = hmac.new(
+                self._app_secret.encode("utf-8"),
+                self.access_token.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
         request_headers = {"Authorization": f"Bearer {self.access_token}"}
         attempts = 0
 

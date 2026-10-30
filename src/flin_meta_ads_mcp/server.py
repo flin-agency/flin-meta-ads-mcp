@@ -117,6 +117,7 @@ def _client(settings: MetaAdsSettings):
 
     client = MetaClient(
         access_token=settings.access_token,
+        app_secret=settings.app_secret,
         api_version=settings.api_version,
         timeout_seconds=settings.timeout_seconds,
         max_retries=settings.max_retries,

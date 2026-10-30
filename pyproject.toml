@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flin-meta-ads-mcp"
-version = "0.1.10"
+version = "0.1.11"
 description = "Strict read-only MCP server for Meta Ads"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ dev = [
 ]
 
 [project.scripts]
-flin-meta-ads-mcp = "flin_meta_ads_mcp.server:main"
+flin-meta-ads-mcp = "flin_meta_ads_mcp.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flin_meta_ads_mcp"]

@@ -3,8 +3,29 @@ from __future__ import annotations
 import asyncio
 import json
 
+import httpx
+import respx
+
 from flin_meta_ads_mcp import server
-from flin_meta_ads_mcp.config import MetaAdsSettings
+from flin_meta_ads_mcp.config import MetaAdsSettings, load_config
+
+
+@respx.mock
+def test_server_client_uses_app_secret_from_environment() -> None:
+    settings = load_config({
+        "META_ACCESS_TOKEN": "what do ya want for nothing?",
+        "META_APP_SECRET": "Jefe",
+    })
+    route = respx.get("https://graph.facebook.com/v21.0/me/adaccounts").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+
+    with server._client(settings) as client:
+        assert client.get_json("me/adaccounts") == {"data": []}
+
+    assert route.calls[0].request.url.params["appsecret_proof"] == (
+        "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+    )
 
 
 class _DummyTextContent:
