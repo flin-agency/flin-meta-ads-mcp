@@ -46,7 +46,7 @@ That means:
 
 ## Claude Desktop on macOS — installable package
 
-Download **`flin-meta-ads-mcp-0.1.15-macos-arm64.mcpb`** from
+Download **`flin-meta-ads-mcp-0.1.16-macos-arm64.mcpb`** from
 [GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest).
 The extension supports **Apple Silicon (M1 and newer) only**. No Intel packages
 are produced from v0.1.15 onward.

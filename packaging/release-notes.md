@@ -1,3 +1,11 @@
+## flin Meta Ads
+
+The extension now has the simpler display name **flin Meta Ads**, without platform or architecture suffixes.
+
+New description: “Analysiere deine Meta-Werbekonten, Kampagnen und Anzeigen direkt in Claude. Nur Lesezugriff, mit automatischen Updates.”
+
+The name and description belong to Claude's installed extension metadata. Install this MCPB once to see the updated wording. Existing v0.1.15 installations continue receiving automatic PyPI server updates without reinstallation; those updates do not replace Claude's extension metadata.
+
 ## Claude Desktop — Apple Silicon (M1 and newer)
 
 Install the attached `.mcpb` via Claude Desktop → Settings → Extensions → Advanced settings → Install Extension.

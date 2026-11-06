@@ -1,9 +1,9 @@
 {
   "manifest_version": "0.3",
   "name": "flin-meta-ads-mcp",
-  "display_name": "flin Meta Ads (Apple Silicon)",
-  "version": "0.1.15",
-  "description": "Read-only Meta Ads for M1 and newer Macs. Automatically prepares PyPI updates for the next extension start.",
+  "display_name": "flin Meta Ads",
+  "version": "0.1.16",
+  "description": "Analysiere deine Meta-Werbekonten, Kampagnen und Anzeigen direkt in Claude. Nur Lesezugriff, mit automatischen Updates.",
   "author": {
     "name": "flin agency"
   },

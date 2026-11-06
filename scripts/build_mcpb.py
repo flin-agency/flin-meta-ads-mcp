@@ -38,7 +38,6 @@ def main() -> None:
     manifest = json.loads((ROOT / "packaging/manifest.json").read_text())
     if manifest["version"] != version:
         raise SystemExit("Manifest version differs from project version")
-    manifest["display_name"] += f" — macOS {architecture}"
     (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     for name in ("LICENSE", "README.md", "SECURITY.md"):
         shutil.copy2(ROOT / name, stage / name)
