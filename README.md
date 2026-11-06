@@ -53,8 +53,11 @@ Download the `.mcpb` for your Mac from
 - **Intel:** `flin-meta-ads-mcp-0.1.14-macos-x86_64.mcpb`
 
 The packages include their own Python runtime and dependencies. No Python, Homebrew,
-uv or manual JSON configuration is needed. Builds are tested on macOS 15 for each
-architecture; earlier macOS versions are not validated.
+uv or manual JSON configuration is needed. The Apple Silicon package is built and tested on macOS 15 by GitHub Actions.
+The v0.1.14 Intel package is built with Intel Python 3.12.13 and tested under
+Rosetta on macOS 26.6.2; native Intel hardware has not been validated for this
+release because the GitHub Intel runner remained queued. Earlier macOS versions
+are not validated.
 
 1. In Claude Desktop, open **Settings → Extensions** (or **Settings → Desktop app →
    Extensions**, depending on your version), then **Advanced settings → Install Extension…**.

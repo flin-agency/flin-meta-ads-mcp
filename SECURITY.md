@@ -62,8 +62,10 @@ unbounded configuration values and compressed-image resource exhaustion.
 
 Regression tests include malicious paths/method overrides, redirects, error leaks,
 preview URLs and invalid timeout/retry values. Existing tests cover OAuth state,
-local listener lifecycle, credential permissions and image download limits. Release
-jobs test the frozen executable independently on Apple Silicon and Intel runners.
+local listener lifecycle, credential permissions and image download limits. The release workflow supports native Apple Silicon and Intel builds. For v0.1.14,
+the Apple Silicon executable passed GitHub macOS 15 checks; the Intel executable
+passed checks under Rosetta on macOS 26.6.2 with Intel Python 3.12.13. The GitHub
+Intel runner remained queued, so native Intel hardware is not claimed as tested.
 Dependency audit: 29 runtime and 11 build dependencies, no known vulnerabilities
 reported by pip-audit on the review date. Gitleaks 8.30.1 found no secrets in the
 24 existing commits or the scanned working files.
