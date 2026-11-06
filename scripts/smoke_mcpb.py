@@ -24,7 +24,9 @@ async def check(bundle: Path) -> None:
         manifest = json.loads((root / "manifest.json").read_text())
         binary = root / manifest["server"]["entry_point"]
         binary.chmod(0o700)
+        (root / "server/uv").chmod(0o700)
         env = {key: value for key, value in os.environ.items() if not key.startswith(("META_", "PYTHON"))}
+        env["HOME"] = str(root)
         env["META_AUTH_FILE"] = str(root / "missing-credentials.json")
         params = StdioServerParameters(command=str(binary), args=[], env=env)
         with (root / "stderr.log").open("w+") as errlog:

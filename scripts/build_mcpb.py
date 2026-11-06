@@ -15,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
-    if sys.platform != "darwin" or platform.machine() not in {"arm64", "x86_64"}:
-        raise SystemExit("Build on a native arm64 or x86_64 Mac")
+    if sys.platform != "darwin" or platform.machine() != "arm64":
+        raise SystemExit("Build on an Apple Silicon Mac")
     version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
     architecture = platform.machine()
     work = ROOT / "build" / f"mcpb-{architecture}"
@@ -31,6 +31,10 @@ def main() -> None:
         "--distpath", str(stage / "server"), "--workpath", str(work / "pyinstaller"),
         "--specpath", str(work), str(ROOT / "packaging" / "entrypoint.py"),
     ], check=True, cwd=ROOT)
+    import uv
+
+    shutil.copy2(uv.find_uv_bin(), stage / "server/uv")
+    (stage / "server/uv").chmod(0o755)
     manifest = json.loads((ROOT / "packaging/manifest.json").read_text())
     if manifest["version"] != version:
         raise SystemExit("Manifest version differs from project version")

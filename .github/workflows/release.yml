@@ -9,6 +9,9 @@ permissions:
   contents: read
 
 jobs:
+  desktop:
+    uses: ./.github/workflows/desktop-release.yml
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -22,6 +25,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Verify tag and test
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python -c 'import os,tomllib; assert os.environ["RELEASE_TAG"] == "v" + tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]'
+          python -m pip install -e ".[dev]"
+          ruff check .
+          mypy src
+          pytest -q
+
       - name: Build distributions
         run: |
           python -m pip install --upgrade pip
@@ -32,10 +45,12 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dist
-          path: dist/*
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
 
   publish:
-    needs: build
+    needs: [build, desktop]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -48,3 +63,36 @@ jobs:
 
       - name: Publish to PyPI with trusted publishing
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        with:
+          skip-existing: true
+
+  publish-desktop:
+    needs: [publish, desktop]
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: macos-arm64
+          path: dist
+      - name: Verify real PyPI update and updated desktop launch
+        run: |
+          python -m pip install -e .
+          python scripts/smoke_desktop_update.py dist/*.mcpb
+      - name: Publish Apple Silicon package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG — Claude Desktop for Apple Silicon" --notes-file packaging/release-notes.md
+          fi
+          gh release upload "$RELEASE_TAG" dist/*.mcpb dist/*.sha256 --clobber

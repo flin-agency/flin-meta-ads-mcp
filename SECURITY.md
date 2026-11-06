@@ -42,11 +42,37 @@ credential file, enter an access token in the extension settings instead.
 
 ## macOS packages
 
-Release MCPB bundles include a Python runtime and dependencies: no installer script,
-root access or runtime package download is required. Runtime and packaging dependencies
-are version-pinned with SHA-256 hashes. Bundle assembly uses an explicit staging
-allowlist, excluding local credentials, Git history and development environments.
-Each bundle has a SHA-256 file and is tested via a real stdio MCP connection.
+From v0.1.15, MCPB bundles target Apple Silicon only. They contain a working frozen
+fallback server and a version-pinned uv executable. Bundled runtime/build dependencies
+are hash-pinned and assembly uses an explicit allowlist excluding local credentials,
+Git history and development environments. Each package has a SHA-256 checksum.
+
+The desktop launcher checks only `https://pypi.org/pypi/flin-meta-ads-mcp/json`,
+without redirects, and installs stable numbered releases from the fixed official
+PyPI index. A compatible Python runtime may be downloaded by uv from its official
+managed runtime source. Ambient pip/uv configuration, proxy/index overrides and
+Python injection variables are removed from the updater environment. No Meta
+credentials are passed to the updater, installer or test connection.
+
+Updates are intentionally not fixed to the bundle dependency lock: they follow the
+published PyPI package and its compatible dependencies. This trusts future releases
+of this project, PyPI dependencies and uv's managed Python distribution. Only binary
+wheels are accepted, avoiding source-build scripts. A credential-free real MCP
+handshake must succeed before a new environment is activated via an atomic pointer.
+A process lock serializes concurrent updaters. Existing environments are never
+modified or removed during updates. Running chats keep their version; the next
+extension start picks up the prepared update. Failed/offline checks retain the
+previous environment or bundled fallback. The background worker can finish after
+Claude closes, with bounded network/subprocess timeouts.
+
+Update environments are owner-private beneath
+`~/Library/Application Support/flin-meta-ads-mcp/desktop/`. They are executable local
+code, not an OS sandbox. A compromised user account or trusted package publisher is
+outside this protection model. Removing the extension does not delete this cache.
+
+Release automation requires successful tests and bundle creation before PyPI
+publishing, then verifies the real PyPI update path before publishing the MCPB.
+The original v0.1.14 extension requires a one-time replacement to gain auto-updates.
 
 Executables have PyInstaller's ad-hoc signature; they are **not Apple Developer ID
 signed or notarized**. Enterprise extension policy or macOS security settings may

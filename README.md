@@ -46,18 +46,14 @@ That means:
 
 ## Claude Desktop on macOS — installable package
 
-Download the `.mcpb` for your Mac from
-[GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest):
+Download **`flin-meta-ads-mcp-0.1.15-macos-arm64.mcpb`** from
+[GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest).
+The extension supports **Apple Silicon (M1 and newer) only**. No Intel packages
+are produced from v0.1.15 onward.
 
-- **Apple Silicon (M1/M2/M3/M4 and newer):** `flin-meta-ads-mcp-0.1.14-macos-arm64.mcpb`
-- **Intel:** `flin-meta-ads-mcp-0.1.14-macos-x86_64.mcpb`
-
-The packages include their own Python runtime and dependencies. No Python, Homebrew,
-uv or manual JSON configuration is needed. The Apple Silicon package is built and tested on macOS 15 by GitHub Actions.
-The v0.1.14 Intel package is built with Intel Python 3.12.13 and tested under
-Rosetta on macOS 26.6.2; native Intel hardware has not been validated for this
-release because the GitHub Intel runner remained queued. Earlier macOS versions
-are not validated.
+The package includes a working offline server and the uv updater. No separate
+Python, Homebrew, uv or manual JSON configuration is needed. Apple Silicon builds
+are tested on macOS 15 by GitHub Actions; earlier macOS versions are not validated.
 
 1. In Claude Desktop, open **Settings → Extensions** (or **Settings → Desktop app →
    Extensions**, depending on your version), then **Advanced settings → Install Extension…**.
@@ -76,6 +72,37 @@ extension policy may block them. Do not disable macOS protections.
 
 SHA-256 checksum files are attached to the same release. Disable any older manual
 configuration of this server to avoid duplicate tools.
+
+### Automatic updates from PyPI
+
+From v0.1.15, every extension start checks the official PyPI project in the
+background. A newer stable server is installed into a separate private environment,
+including a compatible Python runtime when needed, and tested with a real MCP
+connection. It becomes active at the **next normal start of the extension/Claude**.
+Updates do not interrupt an active conversation. There is no manual package-update
+command or MCPB download needed for routine server updates.
+
+**One-time migration:** replace the v0.1.14 extension with v0.1.15 or newer using
+Install Extension. The old frozen v0.1.14 binary cannot acquire this mechanism on
+its own. The version shown in Claude's extension settings describes the installed
+bundle; the running MCP server can report a newer PyPI version.
+
+Without internet, use continues with the last successfully prepared update or the
+bundled server. The first background update may take a few minutes while Python
+and packages download. Update files live in
+`~/Library/Application Support/flin-meta-ads-mcp/desktop/`; remove that directory
+when uninstalling if you also want to remove downloaded runtimes and versions.
+Old versions are retained so other Claude processes are not interrupted.
+
+### Publishing updates
+
+Every version release is a `vX.Y.Z` Git tag matching `pyproject.toml` and
+`packaging/manifest.json`. The single Release workflow runs tests, builds the
+Apple Silicon MCPB, publishes the wheel/source archive to PyPI through trusted
+publishing, verifies a real PyPI installation and updated extension launch, then
+publishes the GitHub MCPB and checksum. The desktop workflow is reusable and cannot
+publish independently of PyPI. A failed release must be repaired; a GitHub-only
+package is not a completed release. Historical releases are retained.
 
 ## Install
 

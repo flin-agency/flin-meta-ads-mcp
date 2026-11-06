@@ -1,12 +1,17 @@
 {
   "manifest_version": "0.3",
   "name": "flin-meta-ads-mcp",
-  "display_name": "flin Meta Ads (Read-only)",
-  "version": "0.1.14",
-  "description": "Read Meta Ads accounts, campaigns, creatives and insights. No ad changes or spending actions.",
-  "author": {"name": "flin agency"},
+  "display_name": "flin Meta Ads (Apple Silicon)",
+  "version": "0.1.15",
+  "description": "Read-only Meta Ads for M1 and newer Macs. Automatically prepares PyPI updates for the next extension start.",
+  "author": {
+    "name": "flin agency"
+  },
   "homepage": "https://github.com/flin-agency/flin-meta-ads-mcp",
-  "repository": {"type": "git", "url": "https://github.com/flin-agency/flin-meta-ads-mcp"},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flin-agency/flin-meta-ads-mcp"
+  },
   "license": "MIT",
   "server": {
     "type": "binary",
@@ -24,27 +29,48 @@
       }
     }
   },
-  "compatibility": {"platforms": ["darwin"]},
+  "compatibility": {
+    "platforms": [
+      "darwin"
+    ]
+  },
   "tools_generated": true,
   "user_config": {
     "app_id": {
-      "type": "string", "title": "Meta App ID", "required": false, "default": "",
+      "type": "string",
+      "title": "Meta App ID",
+      "required": false,
+      "default": "",
       "description": "Public numeric App ID for browser login. Optional when using an access token."
     },
     "app_secret": {
-      "type": "string", "title": "Meta App Secret", "sensitive": true, "required": false, "default": "",
+      "type": "string",
+      "title": "Meta App Secret",
+      "sensitive": true,
+      "required": false,
+      "default": "",
       "description": "Required for browser login; stored securely by Claude. Never paste it into chat."
     },
     "access_token": {
-      "type": "string", "title": "Meta Access Token (optional)", "sensitive": true, "required": false, "default": "",
+      "type": "string",
+      "title": "Meta Access Token (optional)",
+      "sensitive": true,
+      "required": false,
+      "default": "",
       "description": "Alternative to browser login. Use a token with ads_read; leave empty for browser login."
     },
     "ad_account_id": {
-      "type": "string", "title": "Default ad account (optional)", "required": false, "default": "",
+      "type": "string",
+      "title": "Default ad account (optional)",
+      "required": false,
+      "default": "",
       "description": "Numeric account ID, optionally prefixed with act_. This selects a default, not an access restriction."
     },
     "login_config_id": {
-      "type": "string", "title": "Business Login configuration ID (optional)", "required": false, "default": "",
+      "type": "string",
+      "title": "Business Login configuration ID (optional)",
+      "required": false,
+      "default": "",
       "description": "Only needed if your Meta app uses Facebook Login for Business."
     }
   }
