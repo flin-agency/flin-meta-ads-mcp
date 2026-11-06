@@ -7,12 +7,12 @@ import json
 import httpx
 import pytest
 import respx
+from test_server import _DummyMcpTypesWithUi, _DummyServer
 
 from flin_meta_ads_mcp import server
 from flin_meta_ads_mcp.config import MetaAdsSettings
 from flin_meta_ads_mcp.errors import MetaAPIError
 from flin_meta_ads_mcp.image_download import download_image
-from test_server import _DummyServer, _DummyMcpTypesWithUi
 
 URL = "https://scontent.xx.fbcdn.net/image.png?signature=private"
 PNG = base64.b64decode(
@@ -138,3 +138,14 @@ def test_embedded_file_serializes_with_real_mcp_types(monkeypatch):
     result = types.CallToolResult(content=chunks)
     restored = types.CallToolResult.model_validate_json(result.model_dump_json())
     assert base64.b64decode(restored.content[2].resource.blob) == PNG
+
+
+@respx.mock
+def test_compressed_transfer_is_rejected_before_decompression():
+    import gzip
+    route = respx.get(URL).respond(200, content=gzip.compress(PNG), headers={
+        "content-type": "image/png", "content-encoding": "gzip",
+    })
+    with pytest.raises(ValueError, match="Compressed"):
+        download_image(URL, timeout_seconds=1)
+    assert route.calls[0].request.headers["accept-encoding"] == "identity"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from typing import Any, Self
 
 import httpx
 
+from .config import validate_connection_settings
 from .errors import (
     MetaAdsError,
     MetaAPIError,
@@ -36,6 +38,7 @@ class MetaClient:
         app_secret: str | None = None,
         client: httpx.Client | None = None,
     ) -> None:
+        validate_connection_settings(api_version, timeout_seconds, max_retries)
         self.access_token = access_token
         self._app_secret = app_secret
         self.api_version = api_version
@@ -62,16 +65,6 @@ class MetaClient:
         self.last_request_id = result.request_id
         return result.payload
 
-    def post_json(
-        self,
-        path: str,
-        params: Mapping[str, Any] | None = None,
-        json_body: Mapping[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        result = self.request_json("POST", path, params=params, json_body=json_body)
-        self.last_request_id = result.request_id
-        return result.payload
-
     def request_json(
         self,
         method: str,
@@ -80,9 +73,14 @@ class MetaClient:
         params: Mapping[str, Any] | None = None,
         json_body: Mapping[str, Any] | None = None,
     ) -> _RequestResult:
+        if method != "GET" or json_body is not None:
+            raise PermissionError("Meta Ads API requests are restricted to GET")
         url = self._build_url(path)
         request_params = dict(params or {})
-        request_params.pop("access_token", None)
+        for key in ("access_token", "appsecret_proof", "app_secret", "client_secret"):
+            request_params.pop(key, None)
+        if any(key.lower() in {"method", "http_method", "x-http-method-override"} for key in request_params):
+            raise PermissionError("HTTP method overrides are not allowed")
         if self._app_secret:
             request_params["appsecret_proof"] = hmac.new(
                 self._app_secret.encode("utf-8"),
@@ -93,16 +91,21 @@ class MetaClient:
         attempts = 0
 
         while True:
-            response = self._client_or_new().request(
-                method,
-                url,
-                params=request_params,
-                headers=request_headers,
-                json=dict(json_body or {}) if json_body is not None else None,
-            )
+            try:
+                response = self._client_or_new().request(
+                    method, url, params=request_params, headers=request_headers,
+                    follow_redirects=False,
+                )
+            except httpx.HTTPError:
+                raise MetaAPIError("Could not contact Meta. Retry the request.") from None
             request_id = self._request_id_from_response(response)
-            if response.status_code < 400:
-                payload = response.json() if response.content else {}
+            if 200 <= response.status_code < 300:
+                try:
+                    payload = response.json() if response.content else {}
+                except ValueError:
+                    raise MetaAPIError("Meta returned an invalid JSON response") from None
+                if not isinstance(payload, dict):
+                    raise MetaAPIError("Meta returned an invalid response")
                 return _RequestResult(payload=payload, request_id=request_id)
 
             error = self._error_from_response(response, request_id=request_id)
@@ -116,8 +119,13 @@ class MetaClient:
         return self._client
 
     def _build_url(self, path: str) -> str:
-        clean_path = path.lstrip("/")
-        return f"https://graph.facebook.com/{self.api_version}/{clean_path}"
+        if not re.fullmatch(
+            r"(?:me(?:/(?:adaccounts|permissions))?|[0-9]+(?:/(?:previews))?|"
+            r"act_[0-9]+(?:/(?:campaigns|adsets|ads|adimages|adcreatives|insights|generatepreviews))?|"
+            r"generatepreviews)", path
+        ):
+            raise ValueError("Unsupported Meta read endpoint")
+        return f"https://graph.facebook.com/{self.api_version}/{path}"
 
     @staticmethod
     def _request_id_from_response(response: httpx.Response) -> str | None:
@@ -134,12 +142,18 @@ class MetaClient:
     def _error_from_response(self, response: httpx.Response, *, request_id: str | None) -> MetaAdsError:
         payload = _safe_json(response)
         error = payload.get("error", {}) if isinstance(payload, dict) else {}
-        message = error.get("message") or response.text or "Meta API request failed"
+        error = error if isinstance(error, dict) else {}
+        # Upstream messages, error_data and HTML can echo tokens and signed URLs.
+        message = "Meta API request failed. Check permissions and request parameters."
+        safe_error = {
+            key: value for key in ("code", "error_subcode", "is_transient")
+            if isinstance((value := error.get(key)), (int, bool))
+        }
         code = error.get("code")
 
         details = {
             "status_code": response.status_code,
-            "error": error,
+            "error": safe_error,
         }
 
         if response.status_code in {401, 403} or code in {190, 102}:

@@ -44,7 +44,7 @@ def download_image(url: str, *, timeout_seconds: float) -> tuple[bytes, str]:
         with httpx.Client(timeout=timeout_seconds, follow_redirects=False) as client:
             for hop in range(MAX_REDIRECTS + 1):
                 _validate_url(url)
-                with client.stream("GET", url) as response:
+                with client.stream("GET", url, headers={"Accept-Encoding": "identity"}) as response:
                     if response.is_redirect:
                         location = response.headers.get("location")
                         if not location or hop == MAX_REDIRECTS:
@@ -56,6 +56,8 @@ def download_image(url: str, *, timeout_seconds: float) -> tuple[bytes, str]:
                             "Image download failed; fetch a fresh image URL from Meta and retry",
                             status_code=response.status_code,
                         )
+                    if response.headers.get("content-encoding", "identity").lower() != "identity":
+                        raise ValueError("Compressed image transfer is not supported")
                     mime_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
                     if mime_type not in IMAGE_EXTENSIONS:
                         raise ValueError("Image must be JPEG, PNG, GIF, or WebP")

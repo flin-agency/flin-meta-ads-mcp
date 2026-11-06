@@ -5,6 +5,7 @@ import re
 from collections.abc import Mapping
 from html import unescape
 from typing import Any
+from urllib.parse import urlsplit
 
 from ..config import MetaAdsSettings
 from ..meta_client import MetaClient
@@ -12,6 +13,20 @@ from .common import build_ok_response, resolve_ad_account_id, validate_meta_id
 
 DEFAULT_AD_FORMAT = "DESKTOP_FEED_STANDARD"
 IFRAME_SRC_PATTERN = re.compile(r"""<iframe[^>]+src=["']([^"']+)["']""", re.IGNORECASE)
+
+
+def is_safe_preview_url(url: str) -> bool:
+    try:
+        parts = urlsplit(url)
+        return (
+            parts.scheme == "https"
+            and parts.hostname in {"www.facebook.com", "business.facebook.com"}
+            and parts.port in (None, 443)
+            and parts.username is None and parts.password is None
+            and parts.path == "/ads/api/preview_iframe.php"
+        )
+    except ValueError:
+        return False
 
 
 def normalize_preview_format(value: str | None) -> str:
@@ -25,7 +40,7 @@ def _extract_preview_url_from_body(body: str | None) -> str | None:
     if not match:
         return None
     preview_url = unescape(match.group(1)).strip()
-    return preview_url or None
+    return preview_url if is_safe_preview_url(preview_url) else None
 
 
 def _normalize_creative_spec(creative: Any) -> str:

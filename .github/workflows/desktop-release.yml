@@ -1,0 +1,79 @@
+name: macOS desktop packages
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: arm64
+          - runner: macos-15-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: |
+          python -m pip install --require-hashes -r packaging/requirements.txt -r packaging/build-requirements.txt
+          python -m pip install --no-deps --no-build-isolation .
+      - name: Run tests and security audit
+        run: |
+          python -m pip install pytest respx ruff mypy pip-audit
+          ruff check .
+          mypy src
+          pytest -q
+          pip-audit -r packaging/requirements.txt --disable-pip --no-deps
+          pip-audit -r packaging/build-requirements.txt --disable-pip --no-deps
+      - name: Build clean frozen package
+        run: |
+          python -m venv build/bundle-env
+          build/bundle-env/bin/python -m pip install --require-hashes -r packaging/requirements.txt -r packaging/build-requirements.txt
+          build/bundle-env/bin/python -m pip install --no-deps --no-build-isolation .
+          build/bundle-env/bin/python scripts/build_mcpb.py
+      - name: Verify packaged MCP handshake
+        run: python scripts/smoke_mcpb.py dist/*-${{ matrix.architecture }}.mcpb
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: macos-${{ matrix.architecture }}
+          path: |
+            dist/*.mcpb
+            dist/*.sha256
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: macos-*
+          path: dist
+          merge-multiple: true
+      - name: Publish packages to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG — macOS desktop packages" --notes "Self-contained Claude Desktop extensions for Apple Silicon and Intel. Install the matching .mcpb in Claude Desktop Extensions. See README and SECURITY.md for setup and review scope. Not Apple Developer ID signed/notarized."
+          fi
+          gh release upload "$RELEASE_TAG" dist/*.mcpb dist/*.sha256

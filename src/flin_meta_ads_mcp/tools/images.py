@@ -5,8 +5,8 @@ from typing import Any
 from uuid import uuid4
 
 from ..config import MetaAdsSettings
-from ..meta_client import MetaClient
 from ..image_download import IMAGE_EXTENSIONS, download_image
+from ..meta_client import MetaClient
 from .common import (
     build_collection_response,
     build_entity_response,

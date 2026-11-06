@@ -44,6 +44,36 @@ That means:
 - No automatic background token refresh; rerun browser login when access expires or is revoked
 - No generic Graph API proxy
 
+## Claude Desktop on macOS — installable package
+
+Download the `.mcpb` for your Mac from
+[GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest):
+
+- **Apple Silicon (M1/M2/M3/M4 and newer):** `flin-meta-ads-mcp-0.1.14-macos-arm64.mcpb`
+- **Intel:** `flin-meta-ads-mcp-0.1.14-macos-x86_64.mcpb`
+
+The packages include their own Python runtime and dependencies. No Python, Homebrew,
+uv or manual JSON configuration is needed. Builds are tested on macOS 15 for each
+architecture; earlier macOS versions are not validated.
+
+1. In Claude Desktop, open **Settings → Extensions** (or **Settings → Desktop app →
+   Extensions**, depending on your version), then **Advanced settings → Install Extension…**.
+2. Select the downloaded `.mcpb` and review its permissions.
+3. Enter your **Meta App ID** and **App Secret** in the extension settings. Alternatively,
+   enter an existing **Access Token** with `ads_read` and leave the login fields empty.
+   Never paste secrets into chat.
+4. For browser login, your Meta app must allow `http://localhost:8765/callback`.
+   Ask Claude to “sign me in to Meta”, follow the login link, then check the login status.
+5. Ask Claude to list your ad accounts. If there is more than one, select the intended account.
+
+Browser login stores a local owner-only credential file; token-only setup uses Claude's
+sensitive settings. See [Security and privacy](SECURITY.md) for storage, removal and
+review scope. These packages are not Apple Developer ID signed/notarized; managed
+extension policy may block them. Do not disable macOS protections.
+
+SHA-256 checksum files are attached to the same release. Disable any older manual
+configuration of this server to avoid duplicate tools.
+
 ## Install
 
 Install and run the latest published PyPI release:

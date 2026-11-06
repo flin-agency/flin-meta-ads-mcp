@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sys
 from contextlib import ExitStack
 from html import escape
+from io import TextIOWrapper
 from typing import Any
 from uuid import uuid4
 
@@ -16,6 +18,7 @@ from .errors import AccountSelectionRequired, MetaAdsError
 from .guards import assert_read_only_tool
 from .response import error_response, selection_required_response
 from .tool_registry import auth_tool_specs, tool_specs
+from .tools.previews import is_safe_preview_url
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +109,8 @@ def create_server(
                 api_version=api_version,
                 request_id=request_id,
             )
-        except Exception:  # pragma: no cover - defensive fallback
-            logger.exception("Unexpected server error while handling MCP tool call")
+        except Exception:  # noqa: BLE001 - do not log exceptions containing credentials
+            logger.error("Unexpected server error while handling MCP tool call")
             result = error_response(
                 code="meta_api_error",
                 message="Unexpected server error",
@@ -126,10 +129,20 @@ def main() -> None:
 
 
 async def _main() -> None:
+    import anyio
+
+    # Pass the existing streams: SDK-created wrappers can close the shared
+    # buffers during GC, causing frozen executables to fail their final flush.
+    if isinstance(sys.stdin, TextIOWrapper):
+        sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+    if isinstance(sys.stdout, TextIOWrapper):
+        sys.stdout.reconfigure(encoding="utf-8")
     auth = AuthSession()
     try:
         server = create_server(auth_session=auth)
-        async with stdio_server() as (read_stream, write_stream):
+        async with stdio_server(
+            stdin=anyio.wrap_file(sys.stdin), stdout=anyio.wrap_file(sys.stdout),
+        ) as (read_stream, write_stream):
             await server.run(read_stream, write_stream, server.create_initialization_options())
     finally:
         auth.close()
@@ -198,7 +211,7 @@ def _preview_mcp_app_html(*, name: str, result: dict[str, Any]) -> str | None:
     for row in rows:
         if isinstance(row, dict):
             url = row.get("preview_url")
-            if isinstance(url, str) and url:
+            if isinstance(url, str) and is_safe_preview_url(url):
                 preview_url = url
                 break
 
@@ -209,6 +222,8 @@ def _preview_mcp_app_html(*, name: str, result: dict[str, Any]) -> str | None:
     return (
         "<!doctype html>"
         "<html><head><meta charset='utf-8'/>"
+        "<meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; "
+        "style-src 'unsafe-inline'; frame-src https://www.facebook.com https://business.facebook.com;\"/>"
         "<style>"
         "html,body{margin:0;padding:0;background:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}"
         ".wrap{padding:12px;}"
@@ -219,6 +234,6 @@ def _preview_mcp_app_html(*, name: str, result: dict[str, Any]) -> str | None:
         "<div class='wrap'>"
         "<div class='hint'>Ad Preview</div>"
         f"<a class='cta' href='{safe_preview_url}' target='_blank' rel='noopener noreferrer'>Open in new tab</a>"
-        f"<iframe class='frame' src='{safe_preview_url}' loading='lazy'></iframe>"
+        f"<iframe class='frame' src='{safe_preview_url}' loading='lazy' sandbox='allow-scripts allow-same-origin' referrerpolicy='no-referrer'></iframe>"
         "</div></body></html>"
     )

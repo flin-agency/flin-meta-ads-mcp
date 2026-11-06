@@ -43,11 +43,10 @@ def test_get_json_uses_authorization_header_not_query_token() -> None:
 
 
 @respx.mock
-@pytest.mark.parametrize("method", ["GET", "POST"])
-def test_requests_sign_with_app_secret_and_preserve_parameters(method: str) -> None:
+def test_requests_sign_with_app_secret_and_preserve_parameters() -> None:
     # RFC 4231 test case 2: fixed expected HMAC, independent of implementation.
     expected_proof = "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
-    route = respx.route(method=method, url="https://graph.facebook.com/v21.0/me").mock(
+    route = respx.route(method="GET", url="https://graph.facebook.com/v21.0/me").mock(
         return_value=httpx.Response(200, json={"id": "123"})
     )
     params = {"fields": "id", "access_token": "wrong-token", "appsecret_proof": "stale"}
@@ -59,10 +58,7 @@ def test_requests_sign_with_app_secret_and_preserve_parameters(method: str) -> N
         timeout_seconds=10,
         max_retries=0,
     ) as client:
-        if method == "GET":
-            assert client.get_json("me", params=params) == {"id": "123"}
-        else:
-            assert client.post_json("me", params=params, json_body={"test": True}) == {"id": "123"}
+        assert client.get_json("me", params=params) == {"id": "123"}
 
     request = route.calls[0].request
     assert request.url.params["appsecret_proof"] == expected_proof

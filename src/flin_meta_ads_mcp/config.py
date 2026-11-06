@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import re
 from collections.abc import Mapping
@@ -18,6 +19,19 @@ class MetaAdsSettings:
     max_retries: int
     default_ad_account_id: str | None = None
     app_secret: str | None = field(default=None, repr=False)
+
+
+    def __post_init__(self) -> None:
+        validate_connection_settings(self.api_version, self.timeout_seconds, self.max_retries)
+
+
+def validate_connection_settings(api_version: str, timeout_seconds: float, max_retries: int) -> None:
+    if not re.fullmatch(r"v[0-9]+\.[0-9]+", api_version):
+        raise ValueError("Invalid META_GRAPH_API_VERSION; expected e.g. v21.0")
+    if not math.isfinite(timeout_seconds) or not 0 < timeout_seconds <= 120:
+        raise ValueError("META_TIMEOUT_SECONDS must be between 0 (exclusive) and 120")
+    if isinstance(max_retries, bool) or not isinstance(max_retries, int) or not 0 <= max_retries <= 5:
+        raise ValueError("META_MAX_RETRIES must be an integer between 0 and 5")
 
 
 def load_config(env: Mapping[str, str] | None = None) -> MetaAdsSettings:
