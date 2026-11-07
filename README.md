@@ -5,8 +5,9 @@ Read-only Meta Ads analysis in Claude: accounts, campaigns, ads, images and insi
 ## Claude Desktop on macOS — installable package
 
 **Apple Silicon (M1 or newer).** Download the
-[available desktop package](https://github.com/flin-agency/flin-meta-ads-mcp/releases/download/v0.1.16/flin-meta-ads-mcp-0.1.16-macos-arm64.mcpb)
-from [GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest).
+[desktop package](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest/download/flin-meta-ads-mcp.mcpb).
+[Versioned packages and SHA-256 checksums](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest)
+are also available.
 No separate Python, uv, Homebrew or manual JSON setup is required. Intel desktop
 packages are not produced. The developer installation below remains available.
 
