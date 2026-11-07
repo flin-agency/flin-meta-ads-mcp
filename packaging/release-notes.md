@@ -1,26 +1,22 @@
-## flin Meta Ads
+## flin Meta Ads — common connection and installation standard
 
-The extension now has the simpler display name **flin Meta Ads**, without platform or architecture suffixes.
+- Desktop-first setup, privacy/security/support documents and clear running-server diagnostics.
+- New `connection_status`: local by default, explicit `check_live=true` for one read-only Meta access check; no secrets or account data returned. Existing tools remain available.
+- Automatic PyPI updates stay within stable 0.1.x versions. Pre-releases and yanked wheels are excluded; candidate MCP contracts are checked before activation.
+- Both the original versioned Apple Silicon package and identical `flin-meta-ads-mcp.mcpb` alias have SHA-256 checksums. The extension identity is unchanged.
 
-New description: “Analysiere deine Meta-Werbekonten, Kampagnen und Anzeigen direkt in Claude. Nur Lesezugriff, mit automatischen Updates.”
+**Import this package once to replace 0.1.16 or older:** the compatibility bound
+and runtime-source reporting are part of the launcher. Existing auto-updating
+installations can acquire the server tool without a new package, but not these
+launcher changes. Routine compatible server updates afterwards need no reimport.
+Prepared updates activate on the next extension start; current conversations keep
+their running version. Settings and saved logins are retained. Offline, the prepared
+server or bundled fallback starts.
 
-The name and description belong to Claude's installed extension metadata. Install this MCPB once to see the updated wording. Existing v0.1.15 installations continue receiving automatic PyPI server updates without reinstallation; those updates do not replace Claude's extension metadata.
+Apple Silicon (M1 or newer) only. No separate Python, uv or Homebrew is needed.
+App Secrets/tokens belong in sensitive extension settings. Browser-login files are
+local and unencrypted with owner-only permissions. No live customer-account test
+is implied by the automated release checks. Executables are not Developer ID
+signed/notarized.
 
-## Claude Desktop — Apple Silicon (M1 and newer)
-
-Install the attached `.mcpb` via Claude Desktop → Settings → Extensions → Advanced settings → Install Extension.
-No separate Python, uv or Homebrew installation is needed. Intel packages are no longer produced.
-
-### Automatic server updates
-
-The extension checks the official PyPI project in the background at each start. New stable releases are installed in a private environment and checked with a real MCP handshake. Successful updates become active at the next normal extension/Claude start; running conversations are not interrupted. Offline, the last prepared version or bundled fallback remains available.
-
-**One-time migration:** replace the old v0.1.14 extension with this package. Afterwards, server updates do not require downloading/reinstalling MCPB files. The extension settings can still show the original bundle version while the MCP server reports its current PyPI version.
-
-### Release process
-
-Every `v*` tag runs tests and creates the M1 package, publishes to PyPI, tests an actual PyPI update through the packaged launcher, and then publishes the GitHub download and SHA-256 checksum. A failing step prevents subsequent steps from being marked successful.
-
-App Secrets and tokens belong only in the sensitive extension settings, never in chat. The updater does not receive Meta credentials. The ad APIs remain read-only. Executables are not Apple Developer ID signed/notarized.
-
-[Setup](https://github.com/flin-agency/flin-meta-ads-mcp#claude-desktop-on-macos--installable-package) · [Security and update details](https://github.com/flin-agency/flin-meta-ads-mcp/blob/main/SECURITY.md)
+[Setup](https://github.com/flin-agency/flin-meta-ads-mcp#claude-desktop-on-macos--installable-package) · [Support](https://github.com/flin-agency/flin-meta-ads-mcp/blob/main/SUPPORT.md)

@@ -15,12 +15,21 @@ import httpx
 from packaging.version import InvalidVersion, Version
 
 from . import __version__
+from .tool_registry import auth_tool_specs, tool_specs
 
 PACKAGE = "flin-meta-ads-mcp"
 PYPI = f"https://pypi.org/pypi/{PACKAGE}/json"
 INDEX = "https://pypi.org/simple"
 RELEASE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 ENV_NAME = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+-[a-f0-9]{32}")
+# This launcher understands the 0.1 CLI, META_* configuration, credentials JSON,
+# and MCP tool contracts. A new minor/major needs an explicitly reviewed launcher.
+MINIMUM_SERVER = Version("0.1.15")
+MAXIMUM_SERVER = Version("0.2.0")
+
+
+def compatible_release(version: str) -> bool:
+    return bool(RELEASE.fullmatch(version)) and MINIMUM_SERVER <= Version(version) < MAXIMUM_SERVER
 
 
 def state_directory() -> Path:
@@ -37,13 +46,13 @@ def clean_environment(*, credentials: bool = False) -> dict[str, str]:
     }
 
 
-def read_active(root: Path, *, minimum: str = __version__) -> tuple[str, Path] | None:
+def read_active(root: Path, *, minimum: str | None = None) -> tuple[str, Path] | None:
     try:
         record = json.loads((root / "active.json").read_text())
         version, name = record["version"], record["environment"]
-        if not RELEASE.fullmatch(version) or not ENV_NAME.fullmatch(name):
+        if not compatible_release(version) or not ENV_NAME.fullmatch(name):
             return None
-        if not name.startswith(version + "-") or Version(version) < Version(minimum):
+        if not name.startswith(version + "-") or Version(version) < Version(minimum or __version__):
             return None
         directory = root / "versions" / name
         if directory.is_symlink():
@@ -60,10 +69,18 @@ def latest_release() -> tuple[str, str]:
     with httpx.Client(timeout=10, follow_redirects=False, trust_env=False) as client:
         response = client.get(PYPI)
         response.raise_for_status()
-        info = response.json()["info"]
-    version = info["version"]
-    if not isinstance(version, str) or not RELEASE.fullmatch(version):
-        raise ValueError("Only stable numbered releases are supported")
+        releases = response.json()["releases"]
+    candidates = {
+        version: files for version, files in releases.items()
+        if compatible_release(version) and any(
+            file.get("packagetype") == "bdist_wheel" and not file.get("yanked") for file in files
+        )
+    }
+    if not candidates:
+        raise ValueError("No compatible stable release is available")
+    version = max(candidates, key=Version)
+    info = next(file for file in candidates[version]
+                if file.get("packagetype") == "bdist_wheel" and not file.get("yanked"))
     # Ask uv for a runtime compatible with the published package, not the host's
     # Python. Restrict the metadata to version-specifier syntax; never a path/URL.
     requires_python = info.get("requires_python") or ">=3.11"
@@ -91,13 +108,24 @@ async def check():
         result = await session.initialize()
         assert result.serverInfo.version == sys.argv[1]
         tools = await session.list_tools()
-        assert "get_meta_auth_status" in {tool.name for tool in tools.tools}
+        actual = {tool.name: tool.inputSchema for tool in tools.tools}
+        for name, schema in json.loads(sys.argv[3]).items():
+            assert name in actual
+            assert set(actual[name].get("required", [])) <= set(schema.get("required", []))
+            for key, value in schema.get("properties", {}).items():
+                assert actual[name]["properties"][key] == value
         status = await session.call_tool("get_meta_auth_status", {})
         assert json.loads(status.content[0].text)["status"] == "authentication_required"
+        status = await session.call_tool("connection_status", {})
+        data = json.loads(status.content[0].text)
+        assert data["server_version"] == sys.argv[1]
+        assert data["auth_status"] == "unauthenticated"
+        assert data["live_access"] == "not_checked"
 asyncio.run(asyncio.wait_for(check(), 15))
 '''
+    contracts = {spec.name: spec.input_schema for spec in [*tool_specs(), *auth_tool_specs()]}
     run_checked([str(python), "-I", "-c", script, version,
-                 str(root / "probe-no-credentials.json")], env=env, timeout=25)
+                 str(root / "probe-no-credentials.json"), json.dumps(contracts)], env=env, timeout=25)
 
 
 def prepare_update(root: Path, uv: Path) -> None:
@@ -111,6 +139,8 @@ def prepare_update(root: Path, uv: Path) -> None:
         except BlockingIOError:
             return  # Another Claude process is already preparing the update.
         version, requires_python = latest_release()
+        if not compatible_release(version):
+            raise ValueError("Incompatible server release")
         active = read_active(root)
         current = active[0] if active else __version__
         if Version(version) <= Version(current):
@@ -162,11 +192,14 @@ def main() -> None:
     active = read_active(root)
     if active:
         try:
+            env = clean_environment(credentials=True)
+            env.update(FLIN_META_DESKTOP_VERSION=__version__, FLIN_META_DESKTOP_RUNTIME="cached")
             os.execve(str(active[1]), [str(active[1]), "-I", "-m", "flin_meta_ads_mcp.cli"],
-                      clean_environment(credentials=True))
+                      env)
         except OSError:
             pass
     from .cli import main as serve
+    os.environ.update(FLIN_META_DESKTOP_VERSION=__version__, FLIN_META_DESKTOP_RUNTIME="bundled")
     serve()
 
 

@@ -85,7 +85,7 @@ jobs:
       - name: Verify real PyPI update and updated desktop launch
         run: |
           python -m pip install -e .
-          python scripts/smoke_desktop_update.py dist/*.mcpb
+          python scripts/smoke_desktop_update.py dist/*-arm64.mcpb
       - name: Publish Apple Silicon package
         env:
           GH_TOKEN: ${{ github.token }}

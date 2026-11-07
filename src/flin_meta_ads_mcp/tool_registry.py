@@ -14,6 +14,15 @@ class ToolSpec:
 def auth_tool_specs() -> list[ToolSpec]:
     return [
         ToolSpec(
+            name="connection_status",
+            description="Show the running server version and local setup without network access. "
+                        "Set check_live=true for one read-only Meta account access check. "
+                        "Never returns secrets or account data; never starts login.",
+            input_schema={"type": "object", "properties": {
+                "check_live": {"type": "boolean", "default": False},
+            }, "additionalProperties": False},
+        ),
+        ToolSpec(
             name="get_meta_auth_status",
             description="Check whether Meta login is needed or has completed. Never returns tokens or secrets.",
             input_schema={"type": "object", "properties": {}, "additionalProperties": False},

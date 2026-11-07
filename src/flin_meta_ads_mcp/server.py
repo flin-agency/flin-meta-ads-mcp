@@ -17,6 +17,7 @@ from .dispatcher import dispatch_tool
 from .errors import AccountSelectionRequired, MetaAdsError
 from .guards import assert_read_only_tool
 from .response import error_response, selection_required_response
+from .status import connection_status
 from .tool_registry import auth_tool_specs, tool_specs
 from .tools.previews import is_safe_preview_url
 
@@ -63,7 +64,10 @@ def create_server(
         request_id = getattr(client, "last_request_id", None)
         api_version = settings.api_version if settings else auth.env.get("META_GRAPH_API_VERSION", "v21.0")
         try:
-            if name == "get_meta_auth_status":
+            if name == "connection_status":
+                result = connection_status(auth.env, check_live=(arguments or {}).get("check_live", False),
+                                           settings=settings)
+            elif name == "get_meta_auth_status":
                 result = auth.status()
             elif name == "start_meta_login":
                 result = await asyncio.to_thread(auth.start, (arguments or {}).get("app_id"))
