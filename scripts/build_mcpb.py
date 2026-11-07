@@ -39,8 +39,11 @@ def main() -> None:
     if manifest["version"] != version:
         raise SystemExit("Manifest version differs from project version")
     (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    for name in ("LICENSE", "README.md", "SECURITY.md"):
+    for name in ("LICENSE", "README.md", "SECURITY.md", "PRIVACY.md", "SUPPORT.md"):
         shutil.copy2(ROOT / name, stage / name)
+    (stage / "docs").mkdir()
+    for name in ("security-review.md", "release-validation.md"):
+        shutil.copy2(ROOT / "docs" / name, stage / "docs" / name)
     shutil.copy2(ROOT / "packaging/requirements.txt", stage / "requirements.txt")
     # Dependencies' license texts are distributed alongside the frozen binary.
     from importlib.metadata import distributions
@@ -62,6 +65,9 @@ def main() -> None:
                 archive.write(path, path.relative_to(stage))
     digest = hashlib.sha256(output.read_bytes()).hexdigest()
     output.with_suffix(".mcpb.sha256").write_text(f"{digest}  {output.name}\n")
+    alias = output.with_name("flin-meta-ads-mcp.mcpb")
+    shutil.copy2(output, alias)
+    alias.with_suffix(".mcpb.sha256").write_text(f"{digest}  {alias.name}\n")
     print(output)
 
 

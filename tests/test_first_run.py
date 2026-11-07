@@ -27,7 +27,14 @@ def test_real_mcp_connection_initializes_without_access_token(tmp_path) -> None:
             assert initialized.serverInfo.name == "flin-meta-ads-mcp"
             listed = await session.list_tools()
             names = {tool.name for tool in listed.tools}
-            assert {"start_meta_login", "get_meta_auth_status", "list_ad_accounts"} <= names
+            assert {"start_meta_login", "get_meta_auth_status", "list_ad_accounts", "connection_status"} <= names
+            response = await session.call_tool("connection_status", {})
+            assert not response.isError
+            status = json.loads(response.content[0].text)
+            assert status["server_version"] == initialized.serverInfo.version
+            assert status["live_access"] == "not_checked"
+            assert status["auth_status"] == "unauthenticated"
+            assert "dummy-secret" not in str(response)
             for name in ("get_meta_auth_status", "start_meta_login", "list_ad_accounts"):
                 response = await session.call_tool(name, {})
                 assert not response.isError

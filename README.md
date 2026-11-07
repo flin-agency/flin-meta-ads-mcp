@@ -1,6 +1,65 @@
 # flin-meta-ads-mcp
 
-`flin-meta-ads-mcp` is a public, strict read-only MCP server for Meta Ads. It is designed to be installed with `uvx` and loaded into Claude with minimal setup.
+Read-only Meta Ads analysis in Claude: accounts, campaigns, ads, images and insights.
+
+## Claude Desktop on macOS — installable package
+
+**Apple Silicon (M1 or newer).** Download the
+[available desktop package](https://github.com/flin-agency/flin-meta-ads-mcp/releases/download/v0.1.16/flin-meta-ads-mcp-0.1.16-macos-arm64.mcpb)
+from [GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest).
+No separate Python, uv, Homebrew or manual JSON setup is required. Intel desktop
+packages are not produced. The developer installation below remains available.
+
+1. Download the `.mcpb`, then open Claude **Settings → Extensions → Advanced settings
+   → Install Extension…** (Extensions may be under Desktop app).
+2. Enter **Meta App ID** and **App Secret** from your administrator/password manager
+   in extension settings. Alternatively, enter an **Access Token** with `ads_read`.
+   Default ad account and Business Login configuration ID are optional. Never put
+   secrets in chat.
+3. For browser login, call `start_meta_login`, open its login link and approve
+   access with your Facebook/Meta account. The administrator must allow
+   `http://localhost:8765/callback` in the Meta app. An existing token skips login.
+4. Call `connection_status`, then `connection_status` with `check_live=true` to
+   verify Meta access (server 0.1.17 or newer). The default call is local only:
+   `auth_status=unknown` with a token is expected until a live check. On older
+   servers, use `get_meta_auth_status`, then `list_ad_accounts` for a real check.
+5. Call `list_ad_accounts`, select the intended account, then `list_campaigns`.
+   A successful connection alone does not establish permission for every account.
+
+Disable an older duplicate manual server entry after migration. Keep its credentials
+until the new installation works. SHA-256 files accompany versioned downloads.
+Packages are not Apple Developer ID signed/notarized; managed extension policy may
+block installation. Do not disable macOS protections.
+
+### Versions, updates and offline use
+
+Claude's **extension version** describes the installed package. The
+`connection_status.server_version` field identifies the **running server**.
+Launcher 0.1.17 additionally reports `extension_version` and `runtime_source`:
+`cached` is a prepared PyPI environment, `bundled` the included fallback.
+
+Each extension start prepares updates from official PyPI in the background.
+Successful updates activate at the **next normal extension/Claude start**, never
+inside a running conversation. Settings and saved login remain in place. Without
+internet, the last prepared server or bundled fallback still starts; Meta data
+requests themselves need internet. The first background download can take minutes.
+
+**One-time package migration:** 0.1.14 lacks automatic updates. Packages 0.1.15–0.1.16
+have automatic updates but need one replacement with 0.1.17 or newer to acquire the
+new compatibility bound and runtime-source reporting. Routine server updates then
+need no new MCPB import. Changes to the launcher or settings UI can need a new import.
+
+The new launcher accepts stable, non-yanked versions **>=0.1.15 and <0.2.0**.
+The compatibility contract is the existing CLI, `META_*` settings, saved-login JSON
+and MCP tool inputs/status responses. The updater checks those tool contracts and
+a real credential-free MCP connection before atomic activation. A new minor/major
+version requires review and potentially a new package; arbitrary jumps are not
+assumed compatible. Pre-releases are excluded.
+
+[Support and manual fallback](SUPPORT.md) explains recovery without deleting login.
+[Privacy](PRIVACY.md) covers data flow, storage, revocation and cleanup.
+[Security](SECURITY.md) links the detailed review. Browser login uses an unencrypted,
+owner-only local credentials file, distinct from Claude's sensitive settings.
 
 ## What it does
 
@@ -44,67 +103,7 @@ That means:
 - No automatic background token refresh; rerun browser login when access expires or is revoked
 - No generic Graph API proxy
 
-## Claude Desktop on macOS — installable package
-
-Download **`flin-meta-ads-mcp-0.1.16-macos-arm64.mcpb`** from
-[GitHub Releases](https://github.com/flin-agency/flin-meta-ads-mcp/releases/latest).
-The extension supports **Apple Silicon (M1 and newer) only**. No Intel packages
-are produced from v0.1.15 onward.
-
-The package includes a working offline server and the uv updater. No separate
-Python, Homebrew, uv or manual JSON configuration is needed. Apple Silicon builds
-are tested on macOS 15 by GitHub Actions; earlier macOS versions are not validated.
-
-1. In Claude Desktop, open **Settings → Extensions** (or **Settings → Desktop app →
-   Extensions**, depending on your version), then **Advanced settings → Install Extension…**.
-2. Select the downloaded `.mcpb` and review its permissions.
-3. Enter your **Meta App ID** and **App Secret** in the extension settings. Alternatively,
-   enter an existing **Access Token** with `ads_read` and leave the login fields empty.
-   Never paste secrets into chat.
-4. For browser login, your Meta app must allow `http://localhost:8765/callback`.
-   Ask Claude to “sign me in to Meta”, follow the login link, then check the login status.
-5. Ask Claude to list your ad accounts. If there is more than one, select the intended account.
-
-Browser login stores a local owner-only credential file; token-only setup uses Claude's
-sensitive settings. See [Security and privacy](SECURITY.md) for storage, removal and
-review scope. These packages are not Apple Developer ID signed/notarized; managed
-extension policy may block them. Do not disable macOS protections.
-
-SHA-256 checksum files are attached to the same release. Disable any older manual
-configuration of this server to avoid duplicate tools.
-
-### Automatic updates from PyPI
-
-From v0.1.15, every extension start checks the official PyPI project in the
-background. A newer stable server is installed into a separate private environment,
-including a compatible Python runtime when needed, and tested with a real MCP
-connection. It becomes active at the **next normal start of the extension/Claude**.
-Updates do not interrupt an active conversation. There is no manual package-update
-command or MCPB download needed for routine server updates.
-
-**One-time migration:** replace the v0.1.14 extension with v0.1.15 or newer using
-Install Extension. The old frozen v0.1.14 binary cannot acquire this mechanism on
-its own. The version shown in Claude's extension settings describes the installed
-bundle; the running MCP server can report a newer PyPI version.
-
-Without internet, use continues with the last successfully prepared update or the
-bundled server. The first background update may take a few minutes while Python
-and packages download. Update files live in
-`~/Library/Application Support/flin-meta-ads-mcp/desktop/`; remove that directory
-when uninstalling if you also want to remove downloaded runtimes and versions.
-Old versions are retained so other Claude processes are not interrupted.
-
-### Publishing updates
-
-Every version release is a `vX.Y.Z` Git tag matching `pyproject.toml` and
-`packaging/manifest.json`. The single Release workflow runs tests, builds the
-Apple Silicon MCPB, publishes the wheel/source archive to PyPI through trusted
-publishing, verifies a real PyPI installation and updated extension launch, then
-publishes the GitHub MCPB and checksum. The desktop workflow is reusable and cannot
-publish independently of PyPI. A failed release must be repaired; a GitHub-only
-package is not a completed release. Historical releases are retained.
-
-## Install
+## Developer installation
 
 Install and run the latest published PyPI release:
 
@@ -124,7 +123,7 @@ Run the latest GitHub code (main branch):
 uvx --refresh --from git+https://github.com/flin-agency/flin-meta-ads-mcp.git flin-meta-ads-mcp
 ```
 
-## Claude config
+## Manual Claude configuration
 
 ### First start without an access token (v0.1.12 and later)
 
@@ -375,18 +374,17 @@ RUN_LIVE_META_TESTS=1 pytest -q
 
 ## Release
 
-Create and push a release tag:
+Keep `pyproject.toml` and `packaging/manifest.json` equal and push a matching `vX.Y.Z`
+tag. The single Release workflow runs tests and builds the Apple Silicon bundle,
+publishes PyPI, verifies the real PyPI updater and launch, then publishes the MCPB
+and checksums. Each release includes the versioned filename plus the identical
+`flin-meta-ads-mcp.mcpb` alias. Never complete a failed release with only an MCPB.
+README download links must point to an already published asset.
 
-```bash
-git tag v0.1.13
-git push origin v0.1.13
-```
-
-After release, users can run:
-
-```bash
-uvx flin-meta-ads-mcp
-```
+Checks distinguish Linux tests, native Apple Silicon package startup outside the
+source tree, and real customer-account access. Automated tests use synthetic
+credentials and do not establish live Meta account access. See
+[release validation](docs/release-validation.md) for the required evidence.
 
 ## Notes
 
